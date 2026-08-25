@@ -47,7 +47,7 @@ class TerminalSession:
     """When True, confirmation prompts for elevated REPL actions are skipped."""
 
     auto_level: AutoLevel = DEFAULT_AUTO_LEVEL
-    """Factory-style Auto (Off|Low|Med|High) shown above the input box."""
+    """Auto (Off|Low|Med|High) shown above the input box."""
 
     prompt_history_backend: History | None = None
     """The live ``prompt_toolkit.History`` object backing the input prompt.

@@ -1,4 +1,4 @@
-"""Paint Droid-style charts inside assistant markdown.
+"""Paint charts inside assistant markdown.
 
 Investigation answers land as markdown. A wall of prose is hard to scan.
 This module detects sparklines, attribution bars, deploy-align markers, and

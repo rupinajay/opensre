@@ -1,4 +1,4 @@
-"""Factory Ask User wizard: breadcrumb and key loop."""
+"""Ask User wizard: breadcrumb and key loop."""
 
 from __future__ import annotations
 

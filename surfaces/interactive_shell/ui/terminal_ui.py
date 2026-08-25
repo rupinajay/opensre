@@ -51,7 +51,7 @@ def render_terminal_ui(
 def render_prompt_region(session: Session, state: ReplState, spinner: SpinnerState) -> ANSI:
     """Compose the live prompt region: plan overlay, status line, rule, input.
 
-    Factory layout: the ``Plan · n/m`` checklist sits above ``Invoking tools…``
+    Layout: the ``Plan · n/m`` checklist sits above ``Invoking tools…``
     (or the idle hint), then the input box. ``Plan updated`` is a transcript
     toast, not part of this region.
 

@@ -190,7 +190,7 @@ class ActionRenderObserver:
         self.console.print(line)
 
     def _render_tool_invocation(self, name: str, data: dict[str, Any]) -> None:
-        """Show the running tool the way Factory does: orange verb, then payload."""
+        """Show the running tool: orange verb, then payload."""
         args = data.get("input")
         label, content = tool_call_display(name, args if isinstance(args, dict) else {})
         line = Text()
@@ -207,9 +207,9 @@ class ActionRenderObserver:
             self._render_tool_invocation("update_plan", data)
             return
         # Attach now so the prompt-region overlay redraws this turn, matching
-        # Factory: ``Plan updated`` in scrollback, checklist live above the spinner.
+        # ``Plan updated`` in scrollback, checklist live above the spinner.
         self.session.task_plan = plan
-        render_plan_updated(self.console)
+        render_plan_updated(self.console, plan)
 
     def _render_skill_end(self, data: dict[str, Any]) -> None:
         """Print the ``↳`` child line under the skill's ``tool_start`` parent."""

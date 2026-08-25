@@ -1,4 +1,4 @@
-"""Factory-style Auto (Off|Low|Med|High) autonomy levels for the REPL.
+"""Auto (Off|Low|Med|High) autonomy levels for the REPL.
 
 Default is High: alpha still allows every action without a prompt. Lower
 levels opt into the existing ``ask`` confirmation hook — they are not a
@@ -12,7 +12,7 @@ from typing import Final
 
 
 class AutoLevel(StrEnum):
-    """Autonomy shown on the Factory-style status line above the input."""
+    """Autonomy shown on the status line above the input."""
 
     OFF = "off"
     LOW = "low"

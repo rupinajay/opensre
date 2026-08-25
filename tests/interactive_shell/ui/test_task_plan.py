@@ -1,4 +1,4 @@
-"""Factory Droid-style task-plan checklist rendering."""
+"""Task-plan checklist rendering."""
 
 from __future__ import annotations
 
@@ -51,11 +51,25 @@ def test_render_task_plan_shows_counter_and_status_glyphs() -> None:
     assert "Confirm checkout returns 2xx" in output
 
 
-def test_plan_updated_toast_is_the_transcript_line() -> None:
+def test_all_pending_plan_says_ready_not_updated() -> None:
+    plan, error = parse_task_plan(
+        {
+            "plan": [
+                {"step": "Confirm scope", "status": "pending"},
+                {"step": "Verify recovery", "status": "pending"},
+            ]
+        }
+    )
+    assert error is None and plan is not None
     buffer = io.StringIO()
     console = Console(file=buffer, force_terminal=False, highlight=False, width=80)
-    render_plan_updated(console)
-    assert buffer.getvalue().strip() == "Plan updated"
+    render_plan_updated(console, plan)
+    output = buffer.getvalue()
+    assert "Plan ready — nothing executed" in output
+    assert "Plan updated" not in output
+    overlay = _strip_ansi(task_plan_overlay_ansi(plan))
+    assert overlay.startswith("Plan ready · 0/2 executed")
+    assert "○ Confirm scope" in overlay
 
 
 def test_task_plan_overlay_matches_factory_checklist() -> None:

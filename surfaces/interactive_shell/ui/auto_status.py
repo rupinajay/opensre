@@ -1,4 +1,4 @@
-"""Factory Auto (Med) status line above the prompt input."""
+"""Auto (Med) status line above the prompt input."""
 
 from __future__ import annotations
 

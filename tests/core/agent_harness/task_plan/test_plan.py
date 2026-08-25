@@ -52,5 +52,7 @@ def test_payload_round_trips() -> None:
         {"plan": _items("pending", "pending", "pending"), "explanation": "draft"}
     )
     assert error is None and plan is not None
+    assert plan.all_pending is True
     restored = task_plan_from_payload(task_plan_to_payload(plan))
     assert restored == plan
+    assert format_task_plan_plain(plan).startswith("Plan ready · 0/3 executed")

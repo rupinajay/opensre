@@ -65,6 +65,13 @@ class TaskPlan:
     def all_completed(self) -> bool:
         return bool(self.steps) and self.completed_count == self.total
 
+    @property
+    def all_pending(self) -> bool:
+        """True when every step is still pending (plan ready, nothing started)."""
+        return bool(self.steps) and all(
+            item.status is PlanStepStatus.PENDING for item in self.steps
+        )
+
 
 def parse_task_plan(args: dict[str, Any]) -> tuple[TaskPlan | None, str | None]:
     """Validate ``update_plan`` arguments. Returns ``(plan, error)``."""

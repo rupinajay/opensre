@@ -3,7 +3,7 @@
 Questions the agent asks the user (a closing ``?``, or a Want-me-to offer)
 render in the highlight colour. The user's reply to that question uses the
 brand colour so the two are visually distinct in the transcript — the same
-split Factory's Droid shell uses for hand-off vs continuation.
+split used for hand-off vs continuation.
 """
 
 from __future__ import annotations

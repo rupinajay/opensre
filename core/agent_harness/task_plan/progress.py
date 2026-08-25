@@ -1,6 +1,6 @@
 """Plain-text task-plan formatting (prompts, logs, non-TTY).
 
-Rich/Droid-style rendering lives in
+Rich rendering lives in
 ``surfaces.interactive_shell.ui.task_plan``.
 """
 
@@ -17,7 +17,11 @@ _STATUS_MARK: dict[PlanStepStatus, str] = {
 
 def format_task_plan_plain(plan: TaskPlan) -> str:
     """Checklist with ``Plan · n/m`` header and ✓ / ● / ○ step marks."""
-    lines = [f"Plan · {plan.current_index}/{plan.total}"]
+    if plan.all_pending:
+        header = f"Plan ready · 0/{plan.total} executed"
+    else:
+        header = f"Plan · {plan.current_index}/{plan.total}"
+    lines = [header]
     last_index = plan.total - 1
     for index, item in enumerate(plan.steps):
         mark = _STATUS_MARK[item.status]

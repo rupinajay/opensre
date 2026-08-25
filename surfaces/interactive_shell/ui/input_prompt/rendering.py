@@ -88,7 +88,7 @@ def render_submitted_prompt(console: Console, session: Session, text: str) -> No
     autosubmitted = bool(session.terminal.last_input_autosubmitted)
     session.terminal.last_input_autosubmitted = False
     stripped = text.strip()
-    # Internal exclusive-stdin turn — Droid never echoes ``/choose``.
+    # Internal exclusive-stdin turn — never echo ``/choose``.
     if stripped == "/choose" or stripped.startswith("/choose "):
         return
     is_handoff_answer = bool(session.terminal.awaiting_handoff_answer)
@@ -101,7 +101,7 @@ def render_submitted_prompt(console: Console, session: Session, text: str) -> No
     if len(ask_user_pairs) >= 2:
         # Keep the Ask User block in the transcript (Q white, A brand). Claim
         # the turn number so the next prompt still advances; do not paint a
-        # fake ``[N] ❯`` — Droid leaves this as the Ask User card.
+        # fake ``[N] ❯`` — leave this as the Ask User card.
         session.terminal.claim_turn_number()
         render_ask_user_qa(console, ask_user_pairs)
         return
@@ -176,4 +176,9 @@ def resolve_prompt_placeholder(session: Session) -> ANSI:
         return ANSI(f"{ui_theme.ANSI_DIM}{' · '.join(parts)}{ui_theme.ANSI_RESET}")
     if session.pending_user_choice is not None:
         return ANSI(f"{ui_theme.ANSI_DIM}Ask User menu ready — press Enter{ui_theme.ANSI_RESET}")
+    plan = getattr(session, "task_plan", None)
+    if plan is not None and getattr(plan, "all_pending", False):
+        return ANSI(
+            f"{ui_theme.ANSI_DIM}say go to start the plan, or type a message{ui_theme.ANSI_RESET}"
+        )
     return _DEFAULT_PLACEHOLDER_ANSI

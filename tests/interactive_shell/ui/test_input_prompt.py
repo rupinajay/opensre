@@ -286,6 +286,24 @@ class TestResolvePromptPlaceholder:
         assert "Ask User menu ready" in text
         assert DEFAULT_PLACEHOLDER_TEXT not in text
 
+    def test_pending_plan_tells_the_user_to_say_go(self) -> None:
+        from core.agent_harness.task_plan.plan import parse_task_plan
+
+        session = Session()
+        plan, error = parse_task_plan(
+            {
+                "plan": [
+                    {"step": "Confirm scope", "status": "pending"},
+                    {"step": "Verify recovery", "status": "pending"},
+                ]
+            }
+        )
+        assert error is None and plan is not None
+        session.task_plan = plan
+        text = _placeholder_text(session)
+        assert "say go to start the plan" in text
+        assert DEFAULT_PLACEHOLDER_TEXT not in text
+
 
 @dataclass
 class _FakeCompleteState:

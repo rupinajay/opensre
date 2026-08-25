@@ -1,6 +1,6 @@
-"""Factory Droid-style live task-plan checklist for the interactive shell.
+"""Live task-plan checklist for the interactive shell.
 
-Factory's transcript prints a dim ``Plan updated`` toast when the agent
+The transcript prints a dim ``Plan updated`` toast when the agent
 revises the plan. The ``Plan · n/m`` checklist itself is a live overlay
 above the spinner / input — ✓ and ○ dimmed, ● current step in bright body
 text — so compaction of scrollback cannot hide progress.
@@ -31,10 +31,19 @@ def task_plan_from_tool_args(args: dict[str, object]) -> TaskPlan | None:
     return plan
 
 
-def render_plan_updated(console: Console) -> None:
-    """Print Factory's dim ``Plan updated`` toast in the transcript."""
+def render_plan_updated(console: Console, plan: TaskPlan | None = None) -> None:
+    """Print the transcript toast: ready (nothing ran) or updated (work underway)."""
     console.print()
+    if plan is not None and plan.all_pending:
+        console.print(Text("Plan ready — nothing executed", style=str(DIM)))
+        return
     console.print(Text("Plan updated", style=str(DIM)))
+
+
+def _overlay_header(plan: TaskPlan) -> str:
+    if plan.all_pending:
+        return f"Plan ready · 0/{plan.total} executed"
+    return f"Plan · {plan.current_index}/{plan.total}"
 
 
 def _overlay_line(text: str, style: str, width: int) -> str:
@@ -46,7 +55,7 @@ def task_plan_overlay_ansi(plan: TaskPlan) -> str:
     width = _prompt_line_width()
     lines = [
         _overlay_line(
-            f"Plan · {plan.current_index}/{plan.total}",
+            _overlay_header(plan),
             ui_theme.SECONDARY_ANSI,
             width,
         )
@@ -70,10 +79,9 @@ def task_plan_overlay_ansi(plan: TaskPlan) -> str:
 
 def render_task_plan(console: Console, plan: TaskPlan) -> None:
     """Print the toast plus the checklist (tests and non-prompt dumps)."""
-    render_plan_updated(console)
+    render_plan_updated(console, plan)
     header = Text()
-    header.append("Plan · ", style=str(SECONDARY))
-    header.append(f"{plan.current_index}/{plan.total}", style=str(SECONDARY))
+    header.append(_overlay_header(plan), style=str(SECONDARY))
     console.print(header)
     for item in plan.steps:
         glyph = _STATUS_GLYPH[item.status]

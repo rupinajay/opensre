@@ -1,4 +1,4 @@
-"""Factory-style batched Ask User wizard for the interactive shell.
+"""Batched Ask User wizard for the interactive shell.
 
 One payload with several questions: header **Ask User**, breadcrumb
 ``● Shape → ○ Onset → ○ Signals`` (filled = answered, open = remaining),
@@ -48,7 +48,7 @@ def format_ask_user_breadcrumb(
     parts: list[str] = []
     for index, question in enumerate(questions):
         replied = bool(answered[index]) if index < len(answered) else False
-        glyph = "●" if replied else "○"
+        glyph = _FILLED if replied else _OPEN
         label = question.label.strip() or f"Q{index + 1}"
         parts.append(f"{glyph} {label}")
     return _BREADCRUMB_SEP.join(parts)

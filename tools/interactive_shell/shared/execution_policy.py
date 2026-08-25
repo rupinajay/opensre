@@ -25,7 +25,7 @@ alpha, gate it here at the execution stage (not the planner).
 
 This module is intentionally **pure**: it has no terminal I/O, no analytics, and
 no console dependency. The decision is computed by :func:`resolve_confirmation`,
-and the interaction layer (printing the reason/hint, the Factory-style
+and the interaction layer (printing the reason/hint, the
 ``Command to approve`` prompt, and analytics emission) lives in
 ``interactive_shell.ui.execution_confirm.execution_allowed``.
 

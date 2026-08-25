@@ -1,7 +1,7 @@
 """Interaction layer for the REPL execution policy.
 
 This module owns the *user-facing* half of the execution gate: it renders the
-policy decision (``Action blocked``, the non-TTY warning, Factory's
+policy decision (``Action blocked``, the non-TTY warning, the
 ``Command to approve`` card, the ``Yes, allow? [Y/n]`` prompt), reads the
 user's confirmation, and emits analytics. The pure decision
 itself is computed by
@@ -55,7 +55,7 @@ def _render_command_to_approve(
     reason: str,
     action_already_listed: bool,
 ) -> None:
-    """Factory-style approval card: header, command child, why-this-needs-approval."""
+    """Approval card: header, command child, why-this-needs-approval."""
     header = Text()
     header.append("Command to approve", style=str(HIGHLIGHT))
     header.append(" · ", style=str(DIM))

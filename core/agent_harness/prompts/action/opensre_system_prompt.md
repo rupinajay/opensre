@@ -387,8 +387,9 @@ Other tools:
   questions for that round in ONE call (`questions`: [{label, title,
   options}, …]) then STOP. Short labels (Shape, Onset, Blast-radius,
   Signals). A second round after answers is allowed. Do NOT call
-  update_plan until facts are in. Then write the diagnosis and
-  update_plan. If the user said not to run yet, pending plan then STOP.
+  update_plan until facts are in. Then write facts and a hypothesis
+  table, then update_plan. If the user said not to run yet, pending
+  plan then STOP — do not restate the checklist in prose.
   NEVER drip one question per turn. A single decision uses title +
   options. Not for open-ended chat (assistant_handoff).
 - update_plan — live execution checklist for THIS workload. Call BEFORE any

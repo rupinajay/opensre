@@ -16,11 +16,11 @@ from core.agent_harness.task_plan.progress import format_task_plan_plain
 
 ASK_USER_ANSWERED_GUIDANCE = (
     "ASK USER JUST ANSWERED (this turn). Continue — do not sit idle. "
-    "If facts still block a plan, call ask_user_choice once more (next short "
-    "round). Otherwise write the diagnosis (facts, hypothesis table, phased "
-    "plan) and call update_plan. If the user said not to run yet, every step "
-    "pending then STOP. Otherwise first step in_progress and execute. "
-    "Answering is the go-ahead to continue."
+    "If facts still block a plan, call ask_user_choice once more. "
+    "Otherwise write facts and a hypothesis table, then update_plan. "
+    "If the user said not to run yet, every step pending then STOP — do not "
+    "repeat the checklist in prose. Otherwise first step in_progress and "
+    "execute. Answering is the go-ahead to continue."
 )
 
 _INSTRUCTIONS_FILENAME = "planning_instructions.md"
@@ -44,7 +44,12 @@ def current_task_plan_block(plan: TaskPlan | None) -> str:
     """Render the CURRENT PLAN block, or ``""`` when no plan is attached."""
     if plan is None or not plan.steps:
         return ""
-    status = "complete" if plan.all_completed else "in progress"
+    if plan.all_completed:
+        status = "complete"
+    elif plan.all_pending:
+        status = "ready, nothing executed"
+    else:
+        status = "in progress"
     lines = [
         f"CURRENT PLAN ({status}; Plan · {plan.current_index}/{plan.total}). "
         "This is the durable record — older messages may have dropped an "

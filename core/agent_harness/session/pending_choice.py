@@ -5,7 +5,7 @@ session and queues the ``/choose`` slash command; the shell's ``/choose`` handle
 pops the object and renders it as an inline arrow-key menu with exclusive stdin.
 
 A single decision uses ``title`` + ``options``. Several blockers go in
-``questions`` as one payload (Factory Ask User) — not one question per turn.
+``questions`` as one payload (batched Ask User) — not one question per turn.
 Selected labels are auto-submitted as the next user message, so the agent
 receives the decision as structured conversation input — no prose scraping
 and no "Reply with 1, 2, or 3" free-text parsing.
