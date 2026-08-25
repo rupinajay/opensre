@@ -178,7 +178,7 @@ def test_skill_view_tool_end_without_start_prints_nothing() -> None:
 
 
 def test_llm_start_sets_executing_phase() -> None:
-    """Model inference shows Executing… on the prompt spinner."""
+    """Model inference shows Thinking… on the prompt spinner."""
     from surfaces.interactive_shell.runtime.core.state import SpinnerState
     from surfaces.shared.terminal.output.console_state import set_investigation_spinner
 

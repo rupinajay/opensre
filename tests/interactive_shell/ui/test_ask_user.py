@@ -156,3 +156,41 @@ def test_wizard_flushes_leftover_keys_before_reading(monkeypatch) -> None:
     # Once before the loop, once after the first draw — leftover Enter from
     # the previous prompt must not auto-select option 1 on every question.
     assert flushed["count"] >= 2
+
+
+def test_wizard_submit_row_confirms_highlighted_option(monkeypatch) -> None:
+    """Arrow to Submit then Enter uses the option that was highlighted."""
+    # First question has 2 options + custom = 3 rows + Submit. Up from the
+    # first option wraps onto Submit without changing the highlighted option.
+    actions = iter(["up", "enter", "enter", "enter"])
+    monkeypatch.setattr(
+        "surfaces.interactive_shell.ui.ask_user.repl_tty_interactive",
+        lambda: True,
+    )
+    monkeypatch.setattr(
+        "surfaces.interactive_shell.ui.ask_user._read_wizard_action",
+        lambda: next(actions),
+    )
+    monkeypatch.setattr(
+        "surfaces.interactive_shell.ui.ask_user._draw_ask_user",
+        lambda **_kwargs: None,
+    )
+    monkeypatch.setattr(
+        "surfaces.interactive_shell.ui.ask_user._erase_ask_user",
+        lambda _question: None,
+    )
+    monkeypatch.setattr(
+        "surfaces.shared.terminal.components.cpr_stdin.drain_stale_cpr_bytes",
+        lambda: None,
+    )
+    monkeypatch.setattr(
+        "surfaces.interactive_shell.ui.ask_user.flush_pending_input",
+        lambda: None,
+    )
+
+    picked = repl_ask_user(_QUESTIONS)
+    assert picked == (
+        "Hypothetical/demo scenario, no real code",
+        "I'll paste the raw numbers/graph description",
+        "Last 7 days",
+    )

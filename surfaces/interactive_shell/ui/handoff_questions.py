@@ -13,7 +13,7 @@ from rich.text import Text
 
 from core.agent_harness.session.pending_choice import parse_ask_user_answers
 from core.agent_harness.session.want_me_to import WANT_ME_TO_MARKER
-from infrastructure.terminal.theme import BRAND, DIM, HIGHLIGHT
+from infrastructure.terminal import theme as ui_theme
 
 _QUESTION_MAX_CHARS = 400
 
@@ -54,8 +54,8 @@ def render_handoff_question(console: Console, text: str) -> None:
     """Print a hand-off question in highlight, prefixed with ``?``."""
     body = text.strip()
     line = Text()
-    line.append("  ?  ", style=f"bold {HIGHLIGHT}")
-    line.append(body, style=str(HIGHLIGHT))
+    line.append("  ?  ", style=f"bold {ui_theme.HIGHLIGHT}")
+    line.append(body, style=str(ui_theme.HIGHLIGHT))
     console.print()
     console.print(line)
     console.print()
@@ -63,20 +63,21 @@ def render_handoff_question(console: Console, text: str) -> None:
 
 def render_handoff_answer_marker() -> Text:
     """Dim marker painted above a submitted answer to a hand-off question."""
-    return Text("↗ answer", style=str(DIM))
+    return Text("↗ answer", style=str(ui_theme.DIM))
 
 
 def render_ask_user_qa(console: Console, pairs: list[tuple[str, str]]) -> None:
-    """Print Ask User Q→A the way Factory does: numbered questions, brand answers."""
+    """Print Ask User Q→A: orange header, numbered questions, brand answers."""
     console.print()
+    console.print(Text("Ask User", style=f"bold {ui_theme.HIGHLIGHT}"))
     for index, (question, answer) in enumerate(pairs, start=1):
         qline = Text()
-        qline.append(f"  {index}.  ", style=str(DIM))
-        qline.append(question, style=str(HIGHLIGHT))
+        qline.append(f"  {index}.  ", style=str(ui_theme.DIM))
+        qline.append(question, style=str(ui_theme.TEXT))
         console.print(qline)
         aline = Text()
-        aline.append("      ", style=str(DIM))
-        aline.append(answer, style=str(BRAND))
+        aline.append("      ", style=str(ui_theme.DIM))
+        aline.append(answer, style=str(ui_theme.BRAND))
         console.print(aline)
     console.print()
 
@@ -92,7 +93,7 @@ def try_render_ask_user_submission(console: Console, text: str) -> bool:
 
 def handoff_answer_style() -> str:
     """Brand colour for the user's answer text."""
-    return str(BRAND)
+    return str(ui_theme.BRAND)
 
 
 __all__ = [

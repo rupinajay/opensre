@@ -15,10 +15,12 @@ from core.agent_harness.task_plan.plan import PlanStepStatus, TaskPlan
 from core.agent_harness.task_plan.progress import format_task_plan_plain
 
 ASK_USER_ANSWERED_GUIDANCE = (
-    "ASK USER JUST ANSWERED (this turn). Answering the menu is the go-ahead. "
-    "Ignore any earlier 'don't run' / 'plan only' in conversation. Call "
-    "update_plan with the first step in_progress, then execute that step now. "
-    "Do not stop with every step pending."
+    "ASK USER JUST ANSWERED (this turn). Continue — do not sit idle. "
+    "If facts still block a plan, call ask_user_choice once more (next short "
+    "round). Otherwise write the diagnosis (facts, hypothesis table, phased "
+    "plan) and call update_plan. If the user said not to run yet, every step "
+    "pending then STOP. Otherwise first step in_progress and execute. "
+    "Answering is the go-ahead to continue."
 )
 
 _INSTRUCTIONS_FILENAME = "planning_instructions.md"

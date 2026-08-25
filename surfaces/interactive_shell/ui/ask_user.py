@@ -30,9 +30,7 @@ from surfaces.shared.terminal.components.key_reader import (
 CUSTOM_OPTION = "Or type your own..."
 _HEADER = "Ask User"
 _SUBMIT = "Submit"
-_HINT = (
-    "Tab/⇧Tab or ←/→ Questions    ↑/↓ Navigate    Enter/1-9 Select    Esc cancel"
-)
+_HINT = "Tab/⇧Tab or ←/→ Questions    ↑/↓ Navigate    Enter/1-9 Select    Esc cancel"
 _BREADCRUMB_SEP = " → "
 _MENU_LEADING_LINES = 1
 _FILLED = "●"
@@ -61,8 +59,12 @@ def _option_labels(question: AskUserQuestion) -> list[str]:
 
 
 def _menu_height(question: AskUserQuestion) -> int:
-    # leading, header, breadcrumb, rule, question, choices, blank, hint
-    return _MENU_LEADING_LINES + 1 + 1 + 1 + 1 + len(_option_labels(question)) + 1 + 1
+    # leading, header, breadcrumb, rule, question, choices, Submit, blank, hint
+    return _MENU_LEADING_LINES + 1 + 1 + 1 + 1 + len(_option_labels(question)) + 1 + 1 + 1
+
+
+def _row_count(question: AskUserQuestion) -> int:
+    return len(_option_labels(question)) + 1
 
 
 def _breadcrumb_ansi(
@@ -73,20 +75,20 @@ def _breadcrumb_ansi(
 ) -> str:
     """Glyph marks reply state (● replied, ○ not); colour marks position.
 
-    Current step in the accent colour, replied steps in body text, steps not yet
-    reached dimmed — so a glance shows both what is answered and where you are.
+    Current step in the accent colour, replied steps in brand (same green as
+    answers in the transcript), remaining steps dimmed.
     """
     parts: list[str] = []
     for index, question in enumerate(questions):
         if index:
             parts.append(f"{ui_theme.DIM_COUNTER_ANSI}{_BREADCRUMB_SEP}{ui_theme.ANSI_RESET}")
         replied = bool(answered[index]) if index < len(answered) else False
-        glyph = "●" if replied else "○"
+        glyph = _FILLED if replied else _OPEN
         label = question.label.strip() or f"Q{index + 1}"
         if index == current:
-            style = ui_theme.HIGHLIGHT_ANSI
+            style = ui_theme.PROMPT_ACCENT_ANSI
         elif replied:
-            style = ui_theme.TEXT_ANSI
+            style = ui_theme.BRAND_ANSI
         else:
             style = ui_theme.DIM_COUNTER_ANSI
         parts.append(f"{style}{glyph} {label}{ui_theme.ANSI_RESET}")
@@ -120,7 +122,8 @@ def _draw_ask_user(
     write_menu_line(crumb)
     write_menu_line(f"{ui_theme.DIM_COUNTER_ANSI}{'─' * width}{ui_theme.ANSI_RESET}")
     write_menu_line(f"{ui_theme.TEXT_ANSI}{question.title}{ui_theme.ANSI_RESET}")
-    idx = option_index % len(labels)
+    idx = option_index
+    submit_row = len(labels)
     for i, label in enumerate(labels):
         here = i == idx
         numbered = f"{i + 1}. {label}"
@@ -130,6 +133,12 @@ def _draw_ask_user(
             write_menu_line(f"{ui_theme.MENU_SELECTION_ROW_ANSI}{padded}{ui_theme.ANSI_RESET}")
         else:
             write_menu_line(f"{ui_theme.DIM_COUNTER_ANSI}{padded}{ui_theme.ANSI_RESET}")
+    submit_here = idx == submit_row
+    submit_line = _pad(">" if submit_here else " ", _SUBMIT, width)
+    if submit_here:
+        write_menu_line(f"{ui_theme.MENU_SELECTION_ROW_ANSI}{submit_line}{ui_theme.ANSI_RESET}")
+    else:
+        write_menu_line(f"{ui_theme.PROMPT_ACCENT_ANSI}{submit_line}{ui_theme.ANSI_RESET}")
     write_menu_line()
     write_menu_line(f"{ui_theme.DIM_COUNTER_ANSI}{_HINT}{ui_theme.ANSI_RESET}")
     sys.stdout.flush()
@@ -175,12 +184,14 @@ def repl_ask_user(
     answers: list[str | None] = [None] * len(items)
     q_idx = 0
     opt_idx = 0
+    option_focus = 0
     first = True
     current_height = 0
     while True:
         question = items[q_idx]
         labels = _option_labels(question)
-        opt_idx %= len(labels)
+        rows = _row_count(question)
+        opt_idx %= rows
         _draw_ask_user(
             questions=items,
             current=q_idx,
@@ -199,20 +210,29 @@ def repl_ask_user(
         if action in ("tab", "right"):
             q_idx = min(q_idx + 1, len(items) - 1)
             opt_idx = 0
+            option_focus = 0
             continue
         if action in ("shift_tab", "left"):
             q_idx = max(q_idx - 1, 0)
             opt_idx = 0
+            option_focus = 0
             continue
         if action == "up":
-            opt_idx = (opt_idx - 1) % len(labels)
+            opt_idx = (opt_idx - 1) % rows
+            if opt_idx < len(labels):
+                option_focus = opt_idx
             continue
         if action == "down":
-            opt_idx = (opt_idx + 1) % len(labels)
+            opt_idx = (opt_idx + 1) % rows
+            if opt_idx < len(labels):
+                option_focus = opt_idx
             continue
         selected: int | None = None
+        submit_row = len(labels)
         if action == "enter":
-            selected = opt_idx
+            selected = option_focus if opt_idx == submit_row else opt_idx
+            if selected < len(labels):
+                option_focus = selected
         elif len(action) == 1 and action.isdigit():
             picked = int(action) - 1
             if 0 <= picked < len(labels):
@@ -225,6 +245,7 @@ def repl_ask_user(
                 return tuple(str(item) for item in answers)
             q_idx = _next_unanswered(answers, q_idx + 1)
             opt_idx = 0
+            option_focus = 0
             continue
         if action in ("cancel", "eof"):
             _erase_ask_user(question)

@@ -64,7 +64,7 @@ def test_goal_reviewer_fails_open_on_free_text() -> None:
     assert goal.verify(_obs()) is True
 
 
-def test_goal_reviewer_rejects_plan_only_after_ask_user_answers() -> None:
+def test_goal_reviewer_rejects_idle_after_ask_user_answers() -> None:
     from core.agent.goals import should_accept_with_goal
     from core.agent_harness.session.pending_choice import (
         AskUserQuestion,
@@ -79,15 +79,15 @@ def test_goal_reviewer_rejects_plan_only_after_ask_user_answers() -> None:
         ("Dev", "24h"),
     )
     llm = _ScriptedLLM('{"verdict": "GOAL_REACHED"}')
-    names = ["update_plan"]
+    names: list[str] = []
     goal = build_goal_reviewer(llm, answers, executed_tool_names=names)
     assert goal.verify is not None
-    assert goal.verify(_obs()) is False
+    assert goal.verify(_obs(text="I'll wait.", evidence=0)) is False
     assert llm.invokes == 0
     accept, nudge = should_accept_with_goal(
         goal,
-        final_text="Plan created with all five steps pending.",
-        evidence_count=1,
+        final_text="I'll wait.",
+        evidence_count=0,
         iteration=0,
         max_iterations=8,
     )

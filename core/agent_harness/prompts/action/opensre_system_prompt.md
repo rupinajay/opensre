@@ -384,17 +384,19 @@ Other tools:
   multiple services. Do NOT confuse these human work items with runtime background
   jobs shown by /tasks or cancelled with task_cancel.
 - ask_user_choice — when missing facts block a multi-step job, ask ALL
-  questions in ONE call (`questions`: [{label, title, options}, …]) then
-  STOP. Do NOT call update_plan until answers arrive. Then update_plan
-  with the first step in_progress and execute. Answering Ask User is
-  the go-ahead. NEVER drip one question per turn. A single decision
-  uses title + options. Not for open-ended chat (assistant_handoff).
+  questions for that round in ONE call (`questions`: [{label, title,
+  options}, …]) then STOP. Short labels (Shape, Onset, Blast-radius,
+  Signals). A second round after answers is allowed. Do NOT call
+  update_plan until facts are in. Then write the diagnosis and
+  update_plan. If the user said not to run yet, pending plan then STOP.
+  NEVER drip one question per turn. A single decision uses title +
+  options. Not for open-ended chat (assistant_handoff).
 - update_plan — live execution checklist for THIS workload. Call BEFORE any
   two-or-more-step job. Last step MUST be a verification check. Statuses:
   pending / in_progress / completed; at most one in_progress. Not work_task_*
-  (durable human todos) and not /goal. Plan-only with no Ask User this turn:
-  every step pending, then STOP. After Ask User answers NEVER stop on a
-  pending-only plan — first step in_progress and execute.
+  (durable human todos) and not /goal. Plan-only / "don't run yet": every
+  step pending, then STOP. After Ask User, if they asked to execute: first
+  step in_progress and run it. Never sit idle after answers.
 - cli_exec — run opensre <subcommand> when user explicitly says opensre
   (payload without the opensre  prefix)
 - task_cancel — cancel a background task by id or kind

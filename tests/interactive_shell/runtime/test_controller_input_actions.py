@@ -131,3 +131,16 @@ def test_goal_autosubmit_waits_even_without_exclusive_stdin() -> None:
         )
         is True
     )
+
+
+def test_ask_user_answer_autosubmit_does_not_wait() -> None:
+    """Ask User answers must keep the prompt open so Thinking… can paint."""
+    from surfaces.interactive_shell.controller import _should_wait_until_turn_finishes
+
+    assert (
+        _should_wait_until_turn_finishes(
+            exclusive_stdin=False,
+            goal_condition_autosubmitted=False,
+        )
+        is False
+    )

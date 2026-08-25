@@ -12,13 +12,14 @@ work_task_* (durable human todos / /work) and not /goal (session-goal
 keep-going). Do not use those tools to track live step progress.
 
 ASK THEN PLAN
-If missing facts block the work (where a service lives, how to get
-metrics, the time window, which env), call ask_user_choice ONCE with
-every question in `questions` (label, title, options) and STOP. Do not
-drip questions across turns. Do NOT call update_plan until answers
-arrive. After they arrive, update_plan with the first step in_progress
-and execute — answering the menu is the go-ahead. Skip Ask User when
-you already have enough to plan.
+If missing facts block the work, call ask_user_choice with every question
+in that round (`questions`: label, title, options) and STOP. Prefer 2–4
+short labels (Shape, Onset, Blast-radius, Signals). Do not drip one
+question per turn. A second short round after answers is allowed. Do NOT
+call update_plan until facts are in. After answers: continue (another
+round, or a written plan). Answering is the go-ahead to continue. If the
+user said not to run yet, write facts / hypotheses / a pending plan and
+STOP. Skip Ask User when you already have enough to plan.
 
 WHEN TO PLAN
 Call update_plan BEFORE executing any workload that has two or more
@@ -44,11 +45,10 @@ STRUCTURE
   together; leave exactly one in_progress, or mark every step completed.
 - If understanding changes (split, merge, reorder), call update_plan
   with the revised steps and an explanation of why.
-- Plan-only requests ("don't run anything yet") when Ask User did not
-  just run: update_plan with every step pending and STOP. After Ask
-  User answers, do not treat the original "don't run" as a stop.
-- Before you conclude a workload, every step — including verification —
-  is completed. Do not leave pending or in_progress items at the end.
+- Plan-only requests ("don't run anything yet"): after Ask User answers
+  are in, update_plan with every step pending and STOP. Do not execute.
+- Before you conclude a workload that did run, every step — including
+  verification — is completed. Do not leave pending or in_progress items.
 
 HOW TO CALL
 update_plan(plan=[{step, status}, …], explanation?)
@@ -71,5 +71,5 @@ BAD PLANS (never do these)
 - Two or more steps in_progress at once.
 - Executing a multi-step workload without calling update_plan first.
 - Calling update_plan before Ask User when missing facts still block.
-- Leaving every step pending after the user answered Ask User.
+- Leaving every step pending after answers when the user asked to execute.
 - Treating /work or /goal as a substitute for this live checklist.

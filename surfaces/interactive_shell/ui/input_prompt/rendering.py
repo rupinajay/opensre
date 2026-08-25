@@ -99,13 +99,10 @@ def render_submitted_prompt(console: Console, session: Session, text: str) -> No
     session.terminal.awaiting_handoff_answer = False
     ask_user_pairs = parse_ask_user_answers(stripped) if is_handoff_answer else []
     if len(ask_user_pairs) >= 2:
-        # This is the user's menu submission — show a real user turn, not a
-        # floating Q&A block that looks like the agent filled the answers in.
-        console.print(Text("↗ You answered", style=str(ui_theme.DIM)))
-        header = Text()
-        header.append(_counter_text(session.terminal.claim_turn_number()), style=str(ui_theme.DIM))
-        header.append("❯ ", style=f"bold {ui_theme.HIGHLIGHT}")
-        console.print(header)
+        # Keep the Ask User block in the transcript (Q white, A brand). Claim
+        # the turn number so the next prompt still advances; do not paint a
+        # fake ``[N] ❯`` — Droid leaves this as the Ask User card.
+        session.terminal.claim_turn_number()
         render_ask_user_qa(console, ask_user_pairs)
         return
     if is_handoff_answer:

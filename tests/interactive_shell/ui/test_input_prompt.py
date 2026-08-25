@@ -101,6 +101,17 @@ class TestPromptRefreshAutoSubmit:
         assert app.current_buffer.submitted is True
         assert session.terminal.pending_prompt_default is None
 
+    def test_auto_command_not_consumed_when_prompt_is_not_running(self) -> None:
+        """After /choose, no prompt_async is live; leave answers for read_prompt_text."""
+        session = Session()
+        app = _RefreshFakeApp()
+        app.is_running = False
+        wire_prompt_refresh(session, app, _RefreshFakeLoop())
+        session.terminal.set_auto_command("1. Env\nDev\n\n2. Window\n24h")
+        assert app.current_buffer.submitted is False
+        assert session.terminal.pending_prompt_autosubmit is True
+        assert session.terminal.pending_prompt_default == "1. Env\nDev\n\n2. Window\n24h"
+
     def test_plain_prefill_does_not_auto_submit(self) -> None:
         """A prefill without the auto-submit flag must wait for the user (Enter)."""
         session = Session()

@@ -68,8 +68,9 @@ def render_markdown_block(console: Console, text: str) -> None:
     if is_handoff_question(visible):
         render_handoff_question(console, visible)
         return
-    with console.use_theme(ui_theme.MARKDOWN_THEME):
-        console.print(_build_markdown_block(visible))
+    from surfaces.interactive_shell.ui.report_visuals import render_report_markdown
+
+    render_report_markdown(console, visible, build_markdown=_build_markdown_block)
 
 
 def render_response_header(console: Console, label: str) -> None:

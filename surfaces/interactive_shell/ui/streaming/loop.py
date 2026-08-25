@@ -201,7 +201,7 @@ def stream_to_console_state(
     # Markdown via ``console.print(Markdown(...))``. Visible "streaming"
     # is per-paragraph rather than per-chunk — a true live re-render
     # would need cursor manipulation that fights ``patch_stdout``. The
-    # spinner (``⠋ Executing… (Press ESC to stop)  [ Ns]``) ticks during long
+    # spinner (``⠋ Thinking… (Press ESC to stop)  [ Ns]``) ticks during long
     # paragraphs to confirm chunks are still arriving, and code blocks
     # are kept whole (we never split on ``\n\n`` while a fence is open).
     buffer: list[str] = list(peeked)
