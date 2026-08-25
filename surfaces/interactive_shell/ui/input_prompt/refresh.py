@@ -35,10 +35,16 @@ def wire_prompt_refresh(
                 if session.terminal.dispatch_active:
                     invalidate_prompt()
                     return
-                # Idle prompt: auto-submit so interactive setup/connect commands
-                # take the exclusive-stdin path without waiting for Enter.
-                # ``pt_app.is_running`` under-reports during some waits, so we do
-                # not gate on it here — ``dispatch_active`` is the nest guard.
+                # After exclusive-stdin (``/choose``) there is no live
+                # ``prompt_async``. Consuming pending here would drop the
+                # answers and leave an idle prompt. ``read_prompt_text``
+                # autosubmits on the next loop iteration.
+                if not getattr(pt_app, "is_running", False):
+                    invalidate_prompt()
+                    return
+                # Idle live prompt: auto-submit so interactive setup/connect
+                # commands take the exclusive-stdin path without waiting for
+                # Enter. ``dispatch_active`` is the nest guard.
                 session.terminal.pending_prompt_default = None
                 session.terminal.pop_pending_autosubmit()
                 session.terminal.last_input_autosubmitted = True

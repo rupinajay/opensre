@@ -28,22 +28,24 @@ _QUESTIONS = (
 )
 
 
-def test_breadcrumb_marks_current_and_remaining() -> None:
+def test_breadcrumb_hollow_until_a_question_is_replied() -> None:
+    # The current question is not filled just for being current — only replies fill it.
     crumb = format_ask_user_breadcrumb(
         _QUESTIONS,
         current=0,
         answered=(False, False, False),
     )
-    assert crumb == "● Codebase → ○ Metrics → ○ Window"
+    assert crumb == "○ Codebase → ○ Metrics → ○ Window"
 
 
-def test_breadcrumb_keeps_filled_questions_solid() -> None:
+def test_breadcrumb_fills_only_replied_questions() -> None:
+    # Codebase is replied (●); Metrics is current but unanswered, so it stays ○.
     crumb = format_ask_user_breadcrumb(
         _QUESTIONS,
         current=1,
         answered=(True, False, False),
     )
-    assert crumb == "● Codebase → ● Metrics → ○ Window"
+    assert crumb == "● Codebase → ○ Metrics → ○ Window"
 
 
 def test_answer_block_round_trips() -> None:

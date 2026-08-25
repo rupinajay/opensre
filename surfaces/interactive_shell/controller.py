@@ -35,6 +35,7 @@ from surfaces.interactive_shell.runtime.input.actions import (
     InputAction,
     SubmitTurn,
 )
+from surfaces.interactive_shell.runtime.input_policy import turn_should_show_spinner
 from surfaces.interactive_shell.runtime.loop_scheduler import (
     shutdown_loop_scheduler,
     start_loop_scheduler,
@@ -147,6 +148,10 @@ def _should_wait_until_turn_finishes(
     Exclusive-stdin slash commands already wait. ``/goal`` autosubmit is prose
     (no exclusive stdin) but must still wait — otherwise ``[N] ❯`` appears under
     the live crawl spinner and looks like a second / finished goal.
+
+    Ask User answers are also autosubmitted prose, but they must NOT wait:
+    the spinner only paints in the prompt region, so waiting leaves a silent
+    screen after the Q&A (no ``Thinking…``). Keep the next prompt open.
     """
     return exclusive_stdin or goal_condition_autosubmitted
 
@@ -281,16 +286,20 @@ class InteractiveShellController:
                 self.state.deliver_confirmation(text)
                 return True
             case SubmitTurn(text=text, wait_until_idle=wait, warning=warning):
-                # Read before render_submitted_prompt — that clears the flag.
+                # Read before render_submitted_prompt — that clears the flags.
+                autosubmitted = bool(self.session.terminal.last_input_autosubmitted)
+                ask_user_answers = bool(self.session.terminal.awaiting_handoff_answer)
                 wait_for_turn = _should_wait_until_turn_finishes(
                     exclusive_stdin=wait,
-                    goal_condition_autosubmitted=bool(
-                        self.session.terminal.last_input_autosubmitted
-                    ),
+                    goal_condition_autosubmitted=autosubmitted and not ask_user_answers,
                 )
                 if warning:
                     self.echo_console.print(warning)
                 self.prompt.render_submitted_prompt(self.echo_console, text)
+                # Start Thinking… before the next prompt opens so the first
+                # paint is a spinner, not an idle ``[N] ❯``.
+                if not wait_for_turn and turn_should_show_spinner(text, self.session):
+                    self.spinner.start()
                 await self.state.queue.put(text)
                 if wait_for_turn:
                     await self.state.queue.join()

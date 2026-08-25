@@ -152,7 +152,7 @@ class SpinnerState:
     # render pass (layout measurement + paint), so a per-call counter can land
     # on the same frame every visible render and freeze the animation.
     _FRAME_INTERVAL_SECONDS = 0.1
-    EXECUTING_PHASE = "Executing…"
+    EXECUTING_PHASE = "Thinking…"
     INVOKING_TOOLS_PHASE = "Invoking tools…"
     _STOP_HINT = "(Press ESC to stop)"
     # Netrunner verb pools, escalating with time spent in the net: the longer

@@ -1,9 +1,10 @@
 """Factory-style batched Ask User wizard for the interactive shell.
 
 One payload with several questions: header **Ask User**, breadcrumb
-``● Codebase → ○ Metrics → ○ Window``, Tab / Shift+Tab between questions,
-↑↓ through options, Enter to select. Esc cancels (the agent does not
-continue). ``Or type your own...`` skips auto-submit so the user can type.
+``● Shape → ○ Onset → ○ Signals`` (filled = answered, open = remaining),
+Tab / Shift+Tab between questions, ↑↓ through options, Enter or Submit to
+select. Esc cancels (the agent does not continue). ``Or type your own...``
+skips auto-submit so the user can type.
 """
 
 from __future__ import annotations
@@ -28,9 +29,14 @@ from surfaces.shared.terminal.components.key_reader import (
 
 CUSTOM_OPTION = "Or type your own..."
 _HEADER = "Ask User"
-_HINT = "Tab / Shift+Tab questions    ↑↓ options    Enter select    Esc cancel"
+_SUBMIT = "Submit"
+_HINT = (
+    "Tab/⇧Tab or ←/→ Questions    ↑/↓ Navigate    Enter/1-9 Select    Esc cancel"
+)
 _BREADCRUMB_SEP = " → "
 _MENU_LEADING_LINES = 1
+_FILLED = "●"
+_OPEN = "○"
 
 
 def format_ask_user_breadcrumb(
@@ -39,11 +45,12 @@ def format_ask_user_breadcrumb(
     current: int,
     answered: tuple[bool, ...] | list[bool],
 ) -> str:
-    """Breadcrumb: ● current or filled, ○ remaining."""
+    """Breadcrumb: ● replied, ○ not yet (current is distinguished by colour, not glyph)."""
+    del current
     parts: list[str] = []
     for index, question in enumerate(questions):
-        filled = bool(answered[index]) if index < len(answered) else False
-        glyph = "●" if filled or index == current else "○"
+        replied = bool(answered[index]) if index < len(answered) else False
+        glyph = "●" if replied else "○"
         label = question.label.strip() or f"Q{index + 1}"
         parts.append(f"{glyph} {label}")
     return _BREADCRUMB_SEP.join(parts)
@@ -64,15 +71,24 @@ def _breadcrumb_ansi(
     current: int,
     answered: tuple[bool, ...],
 ) -> str:
-    """Dim remaining steps; current step in body text so the bar is scannable."""
+    """Glyph marks reply state (● replied, ○ not); colour marks position.
+
+    Current step in the accent colour, replied steps in body text, steps not yet
+    reached dimmed — so a glance shows both what is answered and where you are.
+    """
     parts: list[str] = []
     for index, question in enumerate(questions):
         if index:
             parts.append(f"{ui_theme.DIM_COUNTER_ANSI}{_BREADCRUMB_SEP}{ui_theme.ANSI_RESET}")
-        filled = bool(answered[index]) if index < len(answered) else False
-        glyph = "●" if filled or index == current else "○"
+        replied = bool(answered[index]) if index < len(answered) else False
+        glyph = "●" if replied else "○"
         label = question.label.strip() or f"Q{index + 1}"
-        style = ui_theme.TEXT_ANSI if index == current else ui_theme.DIM_COUNTER_ANSI
+        if index == current:
+            style = ui_theme.HIGHLIGHT_ANSI
+        elif replied:
+            style = ui_theme.TEXT_ANSI
+        else:
+            style = ui_theme.DIM_COUNTER_ANSI
         parts.append(f"{style}{glyph} {label}{ui_theme.ANSI_RESET}")
     return "".join(parts)
 
