@@ -123,12 +123,15 @@ def test_auto_high_leaves_default_allow() -> None:
     assert result.verdict == "allow"
 
 
-def test_auto_med_allows_reversible_shell_and_asks_investigation() -> None:
-    shell = apply_auto_level(allow_tool("shell"), AutoLevel.MED)
-    assert shell.verdict == "allow"
-    inv = apply_auto_level(allow_tool("investigation"), AutoLevel.MED)
-    assert inv.verdict == "ask"
-    assert "Auto (Med)" in (inv.reason or "")
+def test_auto_med_asks_mutating_tools_and_allows_read_only() -> None:
+    # Med "allow reversible commands": mutation-capable shell/code_agent still
+    # require approval; read-only investigation runs without a prompt.
+    for mutating in ("shell", "code_agent"):
+        result = apply_auto_level(allow_tool(mutating), AutoLevel.MED)
+        assert result.verdict == "ask"
+        assert "Auto (Med)" in (result.reason or "")
+    read_only = apply_auto_level(allow_tool("investigation"), AutoLevel.MED)
+    assert read_only.verdict == "allow"
 
 
 def test_auto_off_asks_every_tool_type() -> None:

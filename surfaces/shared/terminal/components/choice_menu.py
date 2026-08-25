@@ -19,6 +19,7 @@ from rich.console import Console
 from rich.markup import escape
 
 import infrastructure.terminal.theme as ui_theme
+from infrastructure.safety.terminal_output import strip_terminal_controls
 from surfaces.shared.terminal.components.key_reader import read_key_unix, read_key_windows
 
 _HINT = "↑↓ navigate    Enter select    Esc cancel"
@@ -147,6 +148,9 @@ def _draw_menu(
 ) -> None:
     out = sys.stdout
     w = _cols()
+    title = strip_terminal_controls(title)
+    crumb = strip_terminal_controls(crumb)
+    labels = [strip_terminal_controls(label) for label in labels]
     if erase_lines:
         _erase_menu_block(erase_lines)
     for _ in range(_MENU_LEADING_LINES):

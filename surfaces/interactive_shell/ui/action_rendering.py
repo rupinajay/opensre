@@ -26,6 +26,7 @@ from surfaces.interactive_shell.runtime.core.state import SpinnerState
 from surfaces.interactive_shell.ui.streaming import render_markdown_block
 from surfaces.interactive_shell.ui.task_plan import (
     render_plan_updated,
+    render_task_plan,
     task_plan_from_tool_args,
 )
 from surfaces.shared.terminal.output.console_state import get_investigation_spinner
@@ -206,9 +207,13 @@ class ActionRenderObserver:
         if plan is None:
             self._render_tool_invocation("update_plan", data)
             return
-        # Attach now so the prompt-region overlay redraws this turn, matching
-        # ``Plan updated`` in scrollback, checklist live above the spinner.
+        # Attach now so the prompt-region overlay redraws this turn. A pending
+        # plan dumps the full checklist once into the transcript; later updates
+        # keep the toast only — the live overlay is the current step.
         self.session.task_plan = plan
+        if plan.all_pending:
+            render_task_plan(self.console, plan)
+            return
         render_plan_updated(self.console, plan)
 
     def _render_skill_end(self, data: dict[str, Any]) -> None:

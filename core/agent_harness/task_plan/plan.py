@@ -12,6 +12,8 @@ from dataclasses import dataclass
 from enum import StrEnum
 from typing import Any
 
+from infrastructure.safety.terminal_output import strip_terminal_controls
+
 
 class PlanStepStatus(StrEnum):
     """Allowed ``update_plan`` step statuses."""
@@ -76,7 +78,9 @@ class TaskPlan:
 def parse_task_plan(args: dict[str, Any]) -> tuple[TaskPlan | None, str | None]:
     """Validate ``update_plan`` arguments. Returns ``(plan, error)``."""
     explanation_raw = args.get("explanation")
-    explanation = explanation_raw.strip() if isinstance(explanation_raw, str) else ""
+    explanation = (
+        strip_terminal_controls(explanation_raw).strip() if isinstance(explanation_raw, str) else ""
+    )
     raw_plan = args.get("plan")
     if not isinstance(raw_plan, list) or len(raw_plan) < 2:
         return None, "plan must list at least two steps (last step verifies)"
@@ -85,7 +89,7 @@ def parse_task_plan(args: dict[str, Any]) -> tuple[TaskPlan | None, str | None]:
     for item in raw_plan:
         if not isinstance(item, dict):
             return None, "each plan item must be an object with step and status"
-        step_text = str(item.get("step", "")).strip()
+        step_text = strip_terminal_controls(str(item.get("step", ""))).strip()
         status_raw = str(item.get("status", "")).strip()
         if not step_text:
             return None, "each plan item needs a non-empty step"

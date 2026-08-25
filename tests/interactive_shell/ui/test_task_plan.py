@@ -70,14 +70,30 @@ def test_all_pending_plan_says_ready_not_updated() -> None:
     overlay = _strip_ansi(task_plan_overlay_ansi(plan))
     assert overlay.startswith("Plan ready · 0/2 executed")
     assert "○ Confirm scope" in overlay
+    assert "Verify recovery" not in overlay
 
 
-def test_task_plan_overlay_matches_factory_checklist() -> None:
+def test_task_plan_overlay_shows_only_the_current_step() -> None:
     overlay = _strip_ansi(task_plan_overlay_ansi(_sample_plan()))
     assert overlay.startswith("Plan · 2/3")
-    assert "✓ Capture 502 samples from checkout" in overlay
     assert "● Trace 502s to the last deploy" in overlay
-    assert "○ Confirm checkout returns 2xx" in overlay
+    assert "Capture 502 samples from checkout" not in overlay
+    assert "Confirm checkout returns 2xx" not in overlay
+
+
+def test_overlay_strips_control_characters_from_a_raw_step() -> None:
+    from core.agent_harness.task_plan.plan import PlanStep, PlanStepStatus, TaskPlan
+
+    plan = TaskPlan(
+        steps=(
+            PlanStep(step="\x1b]0;pwn\x07Capture samples", status=PlanStepStatus.IN_PROGRESS),
+            PlanStep(step="Verify recovery", status=PlanStepStatus.PENDING),
+        )
+    )
+    overlay = task_plan_overlay_ansi(plan)
+    assert "\x1b]" not in overlay
+    assert "\x07" not in overlay
+    assert "Capture samples" in overlay
 
 
 def test_prompt_region_keeps_the_checklist_above_invoking_tools() -> None:
@@ -94,3 +110,14 @@ def test_prompt_region_keeps_the_checklist_above_invoking_tools() -> None:
     assert rendered.index("Plan · 2/3") < rendered.index(SpinnerState.INVOKING_TOOLS_PHASE)
     assert "Auto (High)" in rendered
     assert rendered.index(SpinnerState.INVOKING_TOOLS_PHASE) < rendered.index("Auto (High)")
+
+
+def test_idle_prompt_region_shows_ready_not_thinking() -> None:
+    session = Session()
+    session.task_plan = _sample_plan()
+    rendered = _strip_ansi(render_prompt_region(session, ReplState(), SpinnerState()).value)
+    assert "Ready" in rendered
+    assert "Thinking" not in rendered
+    assert SpinnerState.EXECUTING_PHASE not in rendered
+    assert "Plan · 2/3" in rendered
+    assert rendered.index("Ready") < rendered.index("Auto (High)")

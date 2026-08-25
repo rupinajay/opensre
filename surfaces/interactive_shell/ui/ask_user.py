@@ -13,6 +13,7 @@ import os
 import sys
 
 from core.agent_harness.session.pending_choice import AskUserQuestion
+from infrastructure.safety.terminal_output import strip_terminal_controls
 from infrastructure.terminal import theme as ui_theme
 from surfaces.shared.terminal.components.choice_menu import (
     erase_menu_lines,
@@ -49,13 +50,13 @@ def format_ask_user_breadcrumb(
     for index, question in enumerate(questions):
         replied = bool(answered[index]) if index < len(answered) else False
         glyph = _FILLED if replied else _OPEN
-        label = question.label.strip() or f"Q{index + 1}"
+        label = strip_terminal_controls(question.label).strip() or f"Q{index + 1}"
         parts.append(f"{glyph} {label}")
     return _BREADCRUMB_SEP.join(parts)
 
 
 def _option_labels(question: AskUserQuestion) -> list[str]:
-    return [*question.options, CUSTOM_OPTION]
+    return [strip_terminal_controls(option) for option in question.options] + [CUSTOM_OPTION]
 
 
 def _menu_height(question: AskUserQuestion) -> int:
@@ -84,7 +85,7 @@ def _breadcrumb_ansi(
             parts.append(f"{ui_theme.DIM_COUNTER_ANSI}{_BREADCRUMB_SEP}{ui_theme.ANSI_RESET}")
         replied = bool(answered[index]) if index < len(answered) else False
         glyph = _FILLED if replied else _OPEN
-        label = question.label.strip() or f"Q{index + 1}"
+        label = strip_terminal_controls(question.label).strip() or f"Q{index + 1}"
         if index == current:
             style = ui_theme.PROMPT_ACCENT_ANSI
         elif replied:
@@ -121,7 +122,9 @@ def _draw_ask_user(
     write_menu_line(f"{ui_theme.PROMPT_ACCENT_ANSI}{_HEADER}{ui_theme.ANSI_RESET}")
     write_menu_line(crumb)
     write_menu_line(f"{ui_theme.DIM_COUNTER_ANSI}{'─' * width}{ui_theme.ANSI_RESET}")
-    write_menu_line(f"{ui_theme.TEXT_ANSI}{question.title}{ui_theme.ANSI_RESET}")
+    write_menu_line(
+        f"{ui_theme.TEXT_ANSI}{strip_terminal_controls(question.title)}{ui_theme.ANSI_RESET}"
+    )
     idx = option_index
     submit_row = len(labels)
     for i, label in enumerate(labels):

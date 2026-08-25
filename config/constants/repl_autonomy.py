@@ -40,7 +40,9 @@ AUTO_LEVEL_TITLES: Final[dict[AutoLevel, str]] = {
 # tool_type values that still need confirmation at this level (High: none).
 AUTO_LEVEL_ASK_TOOL_TYPES: Final[dict[AutoLevel, frozenset[str] | None]] = {
     AutoLevel.HIGH: frozenset(),
-    AutoLevel.MED: frozenset({"investigation"}),
+    # Med "allow reversible commands": read-only work runs, but mutation-capable
+    # tool types still need confirmation.
+    AutoLevel.MED: frozenset({"shell", "code_agent"}),
     AutoLevel.LOW: frozenset({"shell", "code_agent", "investigation", "synthetic_test"}),
     AutoLevel.OFF: None,  # ask every tool type
 }

@@ -289,7 +289,10 @@ class SpinnerState:
         app = get_app_or_none()
         if app is not None and app.current_buffer.text:
             hint += "  ·  esc to clear"
-        return f"{ui_theme.DIM_ANSI}{hint}{ui_theme.ANSI_RESET}"
+        return (
+            f"{ui_theme.PROMPT_ACCENT_ANSI}Ready{ui_theme.ANSI_RESET}"
+            f"{ui_theme.DIM_ANSI} · {hint}{ui_theme.ANSI_RESET}"
+        )
 
     def inline_spinner_ansi(self) -> str:
         if not self.streaming:

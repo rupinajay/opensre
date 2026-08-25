@@ -51,14 +51,14 @@ def render_terminal_ui(
 def render_prompt_region(session: Session, state: ReplState, spinner: SpinnerState) -> ANSI:
     """Compose the live prompt region: plan overlay, status line, rule, input.
 
-    Layout: the ``Plan · n/m`` checklist sits above ``Invoking tools…``
+    Layout: the two-line ``Plan · n/m`` overlay sits above ``Invoking tools…``
     (or the idle hint), then the input box. ``Plan updated`` is a transcript
     toast, not part of this region.
 
     The region always starts with one blank row so the overlay/status line never
     sits flush against whatever output scrolled above it. When a plan is
-    attached, idle and streaming both include it, so height does not jump
-    between those two states.
+    attached, idle and streaming both include the same two overlay rows, so
+    height does not jump between those two states.
     """
     base = prompt_rendering._prompt_message(session).value
     auto_line = strip_cpr_sequences(auto_status_ansi(session))

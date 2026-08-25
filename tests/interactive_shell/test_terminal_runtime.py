@@ -868,6 +868,7 @@ class TestSpinnerState:
         """
         spinner = loop_state.SpinnerState()
         rendered = _strip_ansi(spinner.idle_hint_ansi())
+        assert rendered.startswith("Ready")
         assert "/ for commands" in rendered
         assert "tab tool details" in rendered
         assert "history" in rendered

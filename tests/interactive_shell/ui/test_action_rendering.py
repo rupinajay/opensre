@@ -279,6 +279,27 @@ def test_update_plan_tool_start_renders_the_checklist() -> None:
     assert "(verify)" not in output
 
 
+def test_pending_plan_dumps_the_checklist_once() -> None:
+    observer, buffer = _observer_with_buffer()
+    observer(
+        "tool_start",
+        {
+            "name": "update_plan",
+            "input": {
+                "plan": [
+                    {"step": "Confirm scope", "status": "pending"},
+                    {"step": "Verify recovery", "status": "pending"},
+                ]
+            },
+        },
+    )
+    output = buffer.getvalue()
+    assert "Plan ready — nothing executed" in output
+    assert "Plan ready · 0/2 executed" in output
+    assert "○ Confirm scope" in output
+    assert "○ Verify recovery" in output
+
+
 def test_ask_user_choice_tool_start_does_not_dump_json() -> None:
     observer, buffer = _observer_with_buffer()
     observer(

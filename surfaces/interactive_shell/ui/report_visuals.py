@@ -15,14 +15,7 @@ from rich.console import Console
 from rich.table import Table
 from rich.text import Text
 
-from infrastructure.terminal.theme import (
-    BRAND,
-    DIM,
-    ERROR,
-    HIGHLIGHT,
-    TEXT,
-    WARNING,
-)
+import infrastructure.terminal.theme as ui_theme
 
 _SPARK_CHARS = frozenset("▁▂▃▄▅▆▇█░▒▓▌▍▎▏▐")
 _SPARK_ORDER = "▁▂▃▄▅▆▇█"
@@ -63,15 +56,15 @@ def _split_row(line: str) -> list[str]:
 
 def _spark_style(ch: str) -> str:
     if ch not in _SPARK_ORDER:
-        return str(DIM)
+        return str(ui_theme.DIM)
     idx = _SPARK_ORDER.index(ch)
     if idx >= 6:
-        return str(ERROR)
+        return str(ui_theme.ERROR)
     if idx >= 4:
-        return str(WARNING)
+        return str(ui_theme.WARNING)
     if idx >= 2:
-        return str(HIGHLIGHT)
-    return str(BRAND)
+        return str(ui_theme.HIGHLIGHT)
+    return str(ui_theme.BRAND)
 
 
 def colorize_sparkline(line: str) -> Text:
@@ -81,7 +74,7 @@ def colorize_sparkline(line: str) -> Text:
         if ch in _SPARK_CHARS:
             painted.append(ch, style=_spark_style(ch if ch in _SPARK_ORDER else "▃"))
         else:
-            painted.append(ch, style=str(DIM))
+            painted.append(ch, style=str(ui_theme.DIM))
     return painted
 
 
@@ -92,13 +85,13 @@ def colorize_bar_line(line: str) -> Text:
     for ch in line:
         if ch in _BAR_CHARS:
             in_bar = True
-            painted.append(ch, style=str(WARNING))
+            painted.append(ch, style=str(ui_theme.WARNING))
             continue
         if in_bar and ch == " ":
             painted.append(ch)
             continue
         in_bar = False
-        painted.append(ch, style=str(TEXT))
+        painted.append(ch, style=str(ui_theme.TEXT))
     return painted
 
 
@@ -107,20 +100,20 @@ def colorize_align_line(line: str) -> Text:
     painted = Text()
     cursor = 0
     for match in _ALIGN_RE.finditer(line):
-        painted.append(line[cursor : match.start()], style=str(DIM))
-        painted.append(match.group(1), style=f"bold {HIGHLIGHT}")
+        painted.append(line[cursor : match.start()], style=str(ui_theme.DIM))
+        painted.append(match.group(1), style=f"bold {ui_theme.HIGHLIGHT}")
         cursor = match.end()
-    painted.append(line[cursor:], style=str(DIM))
+    painted.append(line[cursor:], style=str(ui_theme.DIM))
     return painted
 
 
 def colorize_step_line(line: str) -> Text:
     """Step-change callout: arrows and percents in highlight."""
-    painted = Text(line, style=str(TEXT))
+    painted = Text(line, style=str(ui_theme.TEXT))
     for match in _ARROW_RE.finditer(line):
-        painted.stylize(str(HIGHLIGHT), match.start(), match.end())
+        painted.stylize(str(ui_theme.HIGHLIGHT), match.start(), match.end())
     for match in _PERCENT_RE.finditer(line):
-        style = str(ERROR) if match.group(1).startswith("+") else str(BRAND)
+        style = str(ui_theme.ERROR) if match.group(1).startswith("+") else str(ui_theme.BRAND)
         painted.stylize(style, match.start(), match.end())
     return painted
 
@@ -136,10 +129,10 @@ def markdown_table(lines: list[str]) -> Table | None:
     table = Table(
         box=SIMPLE,
         show_header=True,
-        header_style=f"bold {HIGHLIGHT}",
+        header_style=f"bold {ui_theme.HIGHLIGHT}",
         pad_edge=False,
         expand=False,
-        border_style=str(DIM),
+        border_style=str(ui_theme.DIM),
     )
     for title in header:
         table.add_column(title or " ")
@@ -151,11 +144,11 @@ def markdown_table(lines: list[str]) -> Table | None:
         for cell in cells[: len(header)]:
             lower = cell.lower()
             if "rejected" in lower:
-                styled.append(Text(cell, style=str(DIM)))
+                styled.append(Text(cell, style=str(ui_theme.DIM)))
             elif "supported" in lower or "aligns" in lower:
-                styled.append(Text(cell, style=f"bold {BRAND}"))
+                styled.append(Text(cell, style=f"bold {ui_theme.BRAND}"))
             else:
-                styled.append(Text(cell, style=str(TEXT)))
+                styled.append(Text(cell, style=str(ui_theme.TEXT)))
         table.add_row(*styled)
     return table
 
@@ -226,8 +219,6 @@ def render_report_markdown(console: Console, text: str, *, build_markdown) -> No
     ``build_markdown`` is the shared Markdown factory so tests can still
     substitute ``streaming.Markdown``.
     """
-    import infrastructure.terminal.theme as ui_theme
-
     chunks = split_report_chunks(text)
     if not chunks:
         return

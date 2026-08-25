@@ -26,6 +26,7 @@ from core.agent_harness.tools import ActionToolScope, execute_with_action_contex
 from core.domain.types.tools import ToolSurface
 from core.tool import RegisteredTool, SideEffectLevel
 from core.tool_framework.utils import object_schema, string_array_property, string_property
+from infrastructure.safety.terminal_output import strip_terminal_controls
 
 _MIN_OPTIONS = 2
 _MAX_OPTIONS = 8
@@ -96,7 +97,7 @@ def _parse_options(raw: object) -> list[str]:
     if not isinstance(raw, list):
         return options
     for item in raw:
-        text = str(item).strip()
+        text = strip_terminal_controls(str(item)).strip()
         if text and text not in seen:
             seen.add(text)
             options.append(text)
@@ -123,8 +124,8 @@ def _parse_questions(raw: object) -> tuple[list[AskUserQuestion] | None, str | N
     for index, item in enumerate(raw):
         if not isinstance(item, dict):
             return None, f"questions[{index}] must be an object"
-        label = str(item.get("label", "")).strip()
-        title = str(item.get("title", "")).strip()
+        label = strip_terminal_controls(str(item.get("label", ""))).strip()
+        title = strip_terminal_controls(str(item.get("title", ""))).strip()
         options = _parse_options(item.get("options"))
         if not label:
             return None, f"questions[{index}].label is required"
@@ -144,7 +145,7 @@ def execute_ask_user_choice_tool(args: dict[str, Any], ctx: ActionToolScope) -> 
     if questions_error is not None:
         return {"ok": False, "error": questions_error}
 
-    title = str(args.get("title", "")).strip()
+    title = strip_terminal_controls(str(args.get("title", ""))).strip()
     options = _parse_options(args.get("options"))
 
     if questions:

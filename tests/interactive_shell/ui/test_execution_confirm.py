@@ -160,16 +160,19 @@ def test_explicit_ask_tty_rejects_explicit_no() -> None:
     assert "cancelled" in buf.getvalue()
 
 
-def test_auto_med_allows_shell_without_a_prompt() -> None:
+def test_auto_med_prompts_before_mutating_shell() -> None:
     session = Session()
     session.terminal.auto_level = AutoLevel.MED
     buf = io.StringIO()
     console = Console(file=buf, force_terminal=False)
+    prompted = {"asked": False}
 
     def _confirm(_: str) -> str:
-        raise AssertionError("Med must not prompt for reversible shell")
+        prompted["asked"] = True
+        return "n"
 
-    assert execution_allowed(
+    # Med must not silently run a mutation-capable shell command.
+    assert not execution_allowed(
         allow_tool("shell"),
         session=session,
         console=console,
@@ -177,7 +180,8 @@ def test_auto_med_allows_shell_without_a_prompt() -> None:
         confirm_fn=_confirm,
         is_tty=True,
     )
-    assert "Command to approve" not in buf.getvalue()
+    assert prompted["asked"] is True
+    assert "Command to approve" in buf.getvalue()
 
 
 def test_auto_off_shows_command_to_approve() -> None:
