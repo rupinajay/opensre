@@ -21,6 +21,10 @@ from core.agent_harness.prompts.memory.conversation import (
 )
 from core.agent_harness.prompts.runtime_facts import render_static_runtime_facts
 from core.agent_harness.prompts.skills.loader import load_skills_index
+from core.agent_harness.task_plan.prompt import (
+    current_task_plan_block,
+    load_planning_instructions,
+)
 from infrastructure.harness_providers import action_prompt_vendor_fragments
 
 if TYPE_CHECKING:
@@ -131,6 +135,15 @@ def build_action_system_prompt_envelope(turn_snapshot: TurnSnapshot) -> PromptEn
             provenance="core.agent_harness.prompts.skills",
         )
     )
+    blocks.append(
+        PromptBlock(
+            id=PromptBlockId.ACTION_PLANNING_INSTRUCTIONS,
+            kind=PromptBlockKind.RULE,
+            tier=PromptTier.STABLE,
+            content="".join((load_planning_instructions(), "\n\n")),
+            provenance="core.agent_harness.task_plan.planning_instructions.md",
+        )
+    )
     if turn_snapshot.setup_state:
         blocks.append(
             PromptBlock(
@@ -194,6 +207,17 @@ def build_action_system_prompt_envelope(turn_snapshot: TurnSnapshot) -> PromptEn
                 provenance="core.agent_harness.session.persistence.wal_recovery",
             )
         )
+    plan_block = current_task_plan_block(turn_snapshot.task_plan)
+    blocks.extend(
+        _optional_block(
+            id=PromptBlockId.CURRENT_TASK_PLAN,
+            kind=PromptBlockKind.CONTEXT,
+            tier=PromptTier.EPHEMERAL,
+            content=plan_block,
+            provenance="core.agent_harness.task_plan.prompt",
+            suffix="\n",
+        )
+    )
     return PromptEnvelope.from_blocks(
         blocks,
         separator="",

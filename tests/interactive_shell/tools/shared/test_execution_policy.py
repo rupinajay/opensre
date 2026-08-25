@@ -15,12 +15,14 @@ lives in ``tools.interactive_shell.shell.policy`` and is covered by
 
 from __future__ import annotations
 
+from config.constants.repl_autonomy import AutoLevel
 from tools.interactive_shell.shared import (
     ConfirmationOutcome,
     ExecutionPolicyResult,
     ToolExecutionMode,
     ToolExecutionPlan,
     allow_tool,
+    apply_auto_level,
     plan_foreground_tool,
     resolve_confirmation,
 )
@@ -114,3 +116,21 @@ def test_resolve_ask_tty_needs_confirmation() -> None:
     # The analytics outcome for a prompt is decided by the interaction layer.
     assert plan.analytics_outcome is None
     assert plan.analytics_reason is None
+
+
+def test_auto_high_leaves_default_allow() -> None:
+    result = apply_auto_level(allow_tool("shell"), AutoLevel.HIGH)
+    assert result.verdict == "allow"
+
+
+def test_auto_med_allows_reversible_shell_and_asks_investigation() -> None:
+    shell = apply_auto_level(allow_tool("shell"), AutoLevel.MED)
+    assert shell.verdict == "allow"
+    inv = apply_auto_level(allow_tool("investigation"), AutoLevel.MED)
+    assert inv.verdict == "ask"
+    assert "Auto (Med)" in (inv.reason or "")
+
+
+def test_auto_off_asks_every_tool_type() -> None:
+    result = apply_auto_level(allow_tool("slash"), AutoLevel.OFF)
+    assert result.verdict == "ask"

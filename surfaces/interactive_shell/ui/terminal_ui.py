@@ -20,7 +20,9 @@ from typing import TYPE_CHECKING
 from prompt_toolkit.formatted_text import ANSI
 from rich.console import Console
 
+from surfaces.interactive_shell.ui.auto_status import auto_status_ansi
 from surfaces.interactive_shell.ui.input_prompt import rendering as prompt_rendering
+from surfaces.interactive_shell.ui.task_plan import task_plan_overlay_ansi
 from surfaces.shared.terminal.banner import render_ready_box, render_splash
 from surfaces.shared.terminal.components.cpr_stdin import strip_cpr_sequences
 
@@ -47,26 +49,33 @@ def render_terminal_ui(
 
 
 def render_prompt_region(session: Session, state: ReplState, spinner: SpinnerState) -> ANSI:
-    """Compose the live prompt region: context line plus rule and input prefix.
+    """Compose the live prompt region: plan overlay, status line, rule, input.
 
-    The top line is the pending confirmation prompt when one is active,
-    otherwise the spinner, completion preview, or idle hint.
+    Factory layout: the ``Plan · n/m`` checklist sits above ``Invoking tools…``
+    (or the idle hint), then the input box. ``Plan updated`` is a transcript
+    toast, not part of this region.
 
-    The region always starts with one blank row so the hint/spinner line never
-    sits flush against whatever output scrolled above it. The row is constant
-    across all prompt states (no height delta between redraws) and is erased
-    with the rest of the region on submit (``erase_when_done=True``).
+    The region always starts with one blank row so the overlay/status line never
+    sits flush against whatever output scrolled above it. When a plan is
+    attached, idle and streaming both include it, so height does not jump
+    between those two states.
     """
     base = prompt_rendering._prompt_message(session).value
+    auto_line = strip_cpr_sequences(auto_status_ansi(session))
     if state.is_awaiting_confirmation():
-        return ANSI(f"\n{state.confirm_prompt_text}\n{base}")
-    prefix = strip_cpr_sequences(
-        prompt_rendering.resolve_prompt_prefix_ansi(
-            inline_spinner=spinner.inline_spinner_ansi(),
-            idle_hint=prompt_rendering.resolve_idle_hint_ansi(session),
+        prefix = state.confirm_prompt_text
+    else:
+        prefix = strip_cpr_sequences(
+            prompt_rendering.resolve_prompt_prefix_ansi(
+                inline_spinner=spinner.inline_spinner_ansi(),
+                idle_hint=prompt_rendering.resolve_idle_hint_ansi(session),
+            )
         )
-    )
-    return ANSI(f"\n{prefix}\n{base}")
+    plan = getattr(session, "task_plan", None)
+    if plan is not None and getattr(plan, "steps", None):
+        overlay = strip_cpr_sequences(task_plan_overlay_ansi(plan))
+        return ANSI(f"\n{overlay}\n{prefix}\n{auto_line}\n{base}")
+    return ANSI(f"\n{prefix}\n{auto_line}\n{base}")
 
 
 __all__ = ["render_prompt_region", "render_terminal_ui"]

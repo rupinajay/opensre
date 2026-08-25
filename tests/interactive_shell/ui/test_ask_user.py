@@ -1,0 +1,113 @@
+"""Factory Ask User wizard: breadcrumb and key loop."""
+
+from __future__ import annotations
+
+from core.agent_harness.session.pending_choice import (
+    AskUserQuestion,
+    format_ask_user_answers,
+    parse_ask_user_answers,
+)
+from surfaces.interactive_shell.ui.ask_user import format_ask_user_breadcrumb, repl_ask_user
+
+_QUESTIONS = (
+    AskUserQuestion(
+        label="Codebase",
+        title="Where does the /api/orders service live?",
+        options=("Hypothetical/demo scenario, no real code", "I'll point you at a repo"),
+    ),
+    AskUserQuestion(
+        label="Metrics",
+        title="How should I get the p99 latency data?",
+        options=("I'll paste the raw numbers/graph description", "Query Datadog"),
+    ),
+    AskUserQuestion(
+        label="Window",
+        title="What's the time window of the p99 regression?",
+        options=("Last 7 days", "Last 24 hours"),
+    ),
+)
+
+
+def test_breadcrumb_marks_current_and_remaining() -> None:
+    crumb = format_ask_user_breadcrumb(
+        _QUESTIONS,
+        current=0,
+        answered=(False, False, False),
+    )
+    assert crumb == "● Codebase → ○ Metrics → ○ Window"
+
+
+def test_breadcrumb_keeps_filled_questions_solid() -> None:
+    crumb = format_ask_user_breadcrumb(
+        _QUESTIONS,
+        current=1,
+        answered=(True, False, False),
+    )
+    assert crumb == "● Codebase → ● Metrics → ○ Window"
+
+
+def test_answer_block_round_trips() -> None:
+    answers = (
+        "Hypothetical/demo scenario, no real code",
+        "I'll paste the raw numbers/graph description",
+        "Last 7 days",
+    )
+    text = format_ask_user_answers(_QUESTIONS, answers)
+    parsed = parse_ask_user_answers(text)
+    assert parsed == list(zip((q.title for q in _QUESTIONS), answers, strict=True))
+
+
+def test_wizard_enter_on_each_question_submits(monkeypatch) -> None:
+    actions = iter(["enter", "enter", "enter"])
+    monkeypatch.setattr(
+        "surfaces.interactive_shell.ui.ask_user.repl_tty_interactive",
+        lambda: True,
+    )
+    monkeypatch.setattr(
+        "surfaces.interactive_shell.ui.ask_user._read_wizard_action",
+        lambda: next(actions),
+    )
+    monkeypatch.setattr(
+        "surfaces.interactive_shell.ui.ask_user._draw_ask_user",
+        lambda **_kwargs: None,
+    )
+    monkeypatch.setattr(
+        "surfaces.interactive_shell.ui.ask_user._erase_ask_user",
+        lambda _question: None,
+    )
+    monkeypatch.setattr(
+        "surfaces.shared.terminal.components.cpr_stdin.drain_stale_cpr_bytes",
+        lambda: None,
+    )
+
+    picked = repl_ask_user(_QUESTIONS)
+    assert picked == (
+        "Hypothetical/demo scenario, no real code",
+        "I'll paste the raw numbers/graph description",
+        "Last 7 days",
+    )
+
+
+def test_wizard_esc_cancels(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "surfaces.interactive_shell.ui.ask_user.repl_tty_interactive",
+        lambda: True,
+    )
+    monkeypatch.setattr(
+        "surfaces.interactive_shell.ui.ask_user._read_wizard_action",
+        lambda: "cancel",
+    )
+    monkeypatch.setattr(
+        "surfaces.interactive_shell.ui.ask_user._draw_ask_user",
+        lambda **_kwargs: None,
+    )
+    monkeypatch.setattr(
+        "surfaces.interactive_shell.ui.ask_user._erase_ask_user",
+        lambda _question: None,
+    )
+    monkeypatch.setattr(
+        "surfaces.shared.terminal.components.cpr_stdin.drain_stale_cpr_bytes",
+        lambda: None,
+    )
+
+    assert repl_ask_user(_QUESTIONS) is None

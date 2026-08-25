@@ -199,6 +199,13 @@ def _fallback_descriptors() -> tuple[ToolDescriptor, ...]:
             "tools.interactive_shell.actions.task_cancel",
         ),
         ToolDescriptor(
+            "update_plan",
+            (ToolSurface.ACTION,),
+            "interactive_shell",
+            None,
+            "tools.interactive_shell.actions.update_plan",
+        ),
+        ToolDescriptor(
             "rocketchat_send_message",
             (ToolSurface.INVESTIGATION, ToolSurface.ACTION),
             "rocketchat",

@@ -11,6 +11,7 @@ import io
 
 from rich.console import Console
 
+from config.constants.repl_autonomy import AutoLevel
 from surfaces.interactive_shell.session import Session
 from surfaces.interactive_shell.ui.execution_confirm import execution_allowed
 from tools.interactive_shell.shared import (
@@ -139,7 +140,9 @@ def test_explicit_ask_tty_accepts_empty_confirmation() -> None:
         confirm_fn=_confirm,
         is_tty=True,
     )
-    assert captured == ["Proceed? [Y/n] "]
+    assert captured == ["Yes, allow? [Y/n] "]
+    assert "Command to approve" in buf.getvalue()
+    assert "Why this needs approval:" in buf.getvalue()
 
 
 def test_explicit_ask_tty_rejects_explicit_no() -> None:
@@ -155,3 +158,40 @@ def test_explicit_ask_tty_rejects_explicit_no() -> None:
         is_tty=True,
     )
     assert "cancelled" in buf.getvalue()
+
+
+def test_auto_med_allows_shell_without_a_prompt() -> None:
+    session = Session()
+    session.terminal.auto_level = AutoLevel.MED
+    buf = io.StringIO()
+    console = Console(file=buf, force_terminal=False)
+
+    def _confirm(_: str) -> str:
+        raise AssertionError("Med must not prompt for reversible shell")
+
+    assert execution_allowed(
+        allow_tool("shell"),
+        session=session,
+        console=console,
+        action_summary="!pytest",
+        confirm_fn=_confirm,
+        is_tty=True,
+    )
+    assert "Command to approve" not in buf.getvalue()
+
+
+def test_auto_off_shows_command_to_approve() -> None:
+    session = Session()
+    session.terminal.auto_level = AutoLevel.OFF
+    buf = io.StringIO()
+    console = Console(file=buf, force_terminal=False)
+    assert execution_allowed(
+        allow_tool("slash"),
+        session=session,
+        console=console,
+        action_summary="/status",
+        confirm_fn=lambda _: "y",
+        is_tty=True,
+    )
+    assert "Command to approve" in buf.getvalue()
+    assert "Why this needs approval:" in buf.getvalue()

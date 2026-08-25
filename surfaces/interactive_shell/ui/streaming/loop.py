@@ -39,6 +39,10 @@ from rich.console import Console
 import infrastructure.terminal.theme as ui_theme
 from core.agent_harness.spi.prompt_chrome import WANT_ME_TO_MARKER
 from core.agent_harness.spi.session_goal import strip_session_goal_progress_tags
+from surfaces.interactive_shell.ui.handoff_questions import (
+    is_handoff_question,
+    render_handoff_question,
+)
 from surfaces.interactive_shell.ui.streaming.renderer import (
     _build_markdown_block,
     render_markdown_block,
@@ -197,7 +201,7 @@ def stream_to_console_state(
     # Markdown via ``console.print(Markdown(...))``. Visible "streaming"
     # is per-paragraph rather than per-chunk — a true live re-render
     # would need cursor manipulation that fights ``patch_stdout``. The
-    # spinner (``⠋ thinking… (Ns · ↓ X tokens)``) ticks during long
+    # spinner (``⠋ Executing… (Press ESC to stop)  [ Ns]``) ticks during long
     # paragraphs to confirm chunks are still arriving, and code blocks
     # are kept whole (we never split on ``\n\n`` while a fence is open).
     buffer: list[str] = list(peeked)
@@ -233,6 +237,10 @@ def stream_to_console_state(
         nonlocal rendered_paragraphs
         visible = strip_session_goal_progress_tags(text)
         if not visible.strip():
+            return
+        if is_handoff_question(visible):
+            render_handoff_question(console, visible)
+            rendered_paragraphs += 1
             return
         markdown = _build_markdown_block(visible)
         starts_with_self_spacing_block = bool(

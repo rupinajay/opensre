@@ -383,6 +383,17 @@ Other tools:
   on weekdays" style requests. Use channel_targets to post the same check-in to
   multiple services. Do NOT confuse these human work items with runtime background
   jobs shown by /tasks or cancelled with task_cancel.
+- ask_user_choice — when missing facts block a multi-step job, ask ALL
+  questions in ONE call (`questions`: [{label, title, options}, …]) then
+  STOP. Do NOT call update_plan until answers arrive. Then update_plan
+  with the first step in_progress and execute. Answering Ask User is
+  the go-ahead. NEVER drip one question per turn. A single decision
+  uses title + options. Not for open-ended chat (assistant_handoff).
+- update_plan — live execution checklist for THIS workload. Call BEFORE any
+  two-or-more-step job. Last step MUST be a verification check. Statuses:
+  pending / in_progress / completed; at most one in_progress. Not work_task_*
+  (durable human todos) and not /goal. Plan-only requests: update_plan with
+  every step pending, then STOP.
 - cli_exec — run opensre <subcommand> when user explicitly says opensre
   (payload without the opensre  prefix)
 - task_cancel — cancel a background task by id or kind
@@ -512,7 +523,8 @@ session_goal only in content prose when the boolean field is available.
 Still assistant_handoff (no execution requested):
 * capability questions — "do you support consecutive steps?", "can you loop?"
 * explicit plan-only requests — "do not write any code yet; first create a
-  step-by-step plan"
+  step-by-step plan" — call update_plan with every step pending (last step
+  verifies) and STOP. Do not execute until the user confirms.
 * how-to questions — "how would I script 5 sequential steps?"
 
 Compound requests with a non-executable clause: emit a tool call for each

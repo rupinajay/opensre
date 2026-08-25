@@ -1,8 +1,9 @@
 """The action system prompt is loaded from bundled markdown.
 
 The file is the OpenSRE action *planner* STABLE base — compound turns, Phase 1b
-handoff vs investigation_start, follow-up tags, slash mapping. It is not a
-coding-agent / Codex clone (apply_patch, update_plan, AGENTS.md spec).
+handoff vs investigation_start, follow-up tags, slash mapping. Live task
+plans live in ``update_plan`` + ``planning_instructions.md``. It is not a
+coding-agent clone (apply_patch, AGENTS.md spec).
 """
 
 from __future__ import annotations
@@ -16,7 +17,6 @@ _CODING_AGENT_MARKERS = frozenset(
     {
         "coding_assistant_opener",
         "apply_patch",
-        "update_plan",
         "agents_md_spec",
     }
 )
@@ -45,8 +45,6 @@ def _prompt_markers(prompt: str) -> frozenset[str]:
         found.add("coding_assistant_opener")
     if "apply_patch" in prompt:
         found.add("apply_patch")
-    if "update_plan" in prompt:
-        found.add("update_plan")
     if "## AGENTS.md spec" in prompt:
         found.add("agents_md_spec")
     return frozenset(found)

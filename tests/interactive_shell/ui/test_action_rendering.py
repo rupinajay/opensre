@@ -41,7 +41,8 @@ def test_slash_invoke_tool_start_does_not_record_cli_agent() -> None:
 
     assert session.history == []
     assert observer.planned_count == 1
-    assert buffer.getvalue() == ""
+    assert "command" in buffer.getvalue()
+    assert "/model" in buffer.getvalue()
 
 
 def test_shell_run_tool_start_does_not_record_cli_agent() -> None:
@@ -176,6 +177,24 @@ def test_skill_view_tool_end_without_start_prints_nothing() -> None:
     assert buffer.getvalue() == ""
 
 
+def test_llm_start_sets_executing_phase() -> None:
+    """Model inference shows Executing… on the prompt spinner."""
+    from surfaces.interactive_shell.runtime.core.state import SpinnerState
+    from surfaces.shared.terminal.output.console_state import set_investigation_spinner
+
+    observer, _buffer = _observer_with_buffer()
+    spinner = SpinnerState()
+    spinner.start()
+    set_investigation_spinner(spinner)
+    try:
+        observer("llm_start", {"iteration": 0})
+        assert spinner.phase == SpinnerState.EXECUTING_PHASE
+        observer("llm_start", {"iteration": 2})
+        assert spinner.phase == SpinnerState.EXECUTING_PHASE
+    finally:
+        set_investigation_spinner(None)
+
+
 def test_llm_start_advances_spinner_verb_every_two_steps() -> None:
     """The spinner verb re-rolls once per two agent steps, not every step."""
     from surfaces.interactive_shell.runtime.core.state import SpinnerState
@@ -219,16 +238,108 @@ def test_message_update_does_not_record_history_or_count_as_planned() -> None:
     assert observer.planned_count == 0
 
 
-def test_non_skill_tool_end_prints_nothing() -> None:
-    observer, buffer = _skill_observer()
+def test_tool_start_shows_invoking_phase_and_tool_name() -> None:
+    from surfaces.interactive_shell.runtime.core.state import SpinnerState
+    from surfaces.shared.terminal.output.console_state import set_investigation_spinner
 
-    observer("tool_start", {"id": "t1", "name": "shell_run", "input": {"command": "true"}})
+    observer, buffer = _observer_with_buffer()
+    spinner = SpinnerState()
+    spinner.start()
+    set_investigation_spinner(spinner)
+    try:
+        observer("tool_start", {"name": "shell_run", "input": {"command": "true"}})
+        assert spinner.phase == SpinnerState.INVOKING_TOOLS_PHASE
+        output = buffer.getvalue()
+        assert "Execute" in output
+        assert "true" in output
+    finally:
+        set_investigation_spinner(None)
+
+
+def test_update_plan_tool_start_renders_the_checklist() -> None:
+    observer, buffer = _observer_with_buffer()
     observer(
-        "tool_end",
-        {"id": "t1", "name": "shell_run", "input": {"command": "true"}, "output": {"ok": True}},
+        "tool_start",
+        {
+            "name": "update_plan",
+            "input": {
+                "plan": [
+                    {"step": "Capture 502 samples from checkout", "status": "completed"},
+                    {"step": "Trace 502s to the last deploy", "status": "in_progress"},
+                    {"step": "Confirm checkout returns 2xx", "status": "pending"},
+                ]
+            },
+        },
     )
+    output = buffer.getvalue()
+    assert "Plan updated" in output
+    assert observer.session.task_plan is not None
+    assert observer.session.task_plan.current_index == 2
+    assert "Plan · 2/3" not in output
+    assert "(verify)" not in output
 
-    assert buffer.getvalue() == ""
+
+def test_ask_user_choice_tool_start_does_not_dump_json() -> None:
+    observer, buffer = _observer_with_buffer()
+    observer(
+        "tool_start",
+        {
+            "name": "ask_user_choice",
+            "input": {
+                "questions": [
+                    {
+                        "label": "Environment",
+                        "title": "Where is the regression?",
+                        "options": ["Production", "Staging"],
+                    },
+                    {
+                        "label": "Window",
+                        "title": "What window?",
+                        "options": ["24h", "7d"],
+                    },
+                ]
+            },
+        },
+    )
+    output = buffer.getvalue()
+    assert "ask_user_choice" not in output
+    assert "questions" not in output
+
+
+def test_choose_slash_invoke_is_not_echoed_as_a_command_line() -> None:
+    observer, buffer = _observer_with_buffer()
+    observer(
+        "tool_start",
+        {"name": "slash_invoke", "input": {"command": "/choose", "args": []}},
+    )
+    assert "command" not in buffer.getvalue()
+    assert "/choose" not in buffer.getvalue()
+
+
+def test_non_skill_tool_end_returns_spinner_to_executing() -> None:
+    from surfaces.interactive_shell.runtime.core.state import SpinnerState
+    from surfaces.shared.terminal.output.console_state import set_investigation_spinner
+
+    observer, buffer = _skill_observer()
+    spinner = SpinnerState()
+    spinner.start()
+    set_investigation_spinner(spinner)
+    try:
+        observer("tool_start", {"id": "t1", "name": "shell_run", "input": {"command": "true"}})
+        assert spinner.phase == SpinnerState.INVOKING_TOOLS_PHASE
+        observer(
+            "tool_end",
+            {
+                "id": "t1",
+                "name": "shell_run",
+                "input": {"command": "true"},
+                "output": {"ok": True},
+            },
+        )
+        assert spinner.phase == SpinnerState.EXECUTING_PHASE
+        assert "Skill" not in buffer.getvalue()
+    finally:
+        set_investigation_spinner(None)
 
 
 def test_literal_slash_command_records_single_history_entry(

@@ -1,0 +1,215 @@
+"""Factory-style batched Ask User wizard for the interactive shell.
+
+One payload with several questions: header **Ask User**, breadcrumb
+``● Codebase → ○ Metrics → ○ Window``, Tab / Shift+Tab between questions,
+↑↓ through options, Enter to select. Esc cancels (the agent does not
+continue). ``Or type your own...`` skips auto-submit so the user can type.
+"""
+
+from __future__ import annotations
+
+import os
+import sys
+
+from core.agent_harness.session.pending_choice import AskUserQuestion
+from infrastructure.terminal import theme as ui_theme
+from surfaces.shared.terminal.components.choice_menu import (
+    erase_menu_lines,
+    menu_columns,
+    repl_tty_interactive,
+    write_menu_line,
+)
+from surfaces.shared.terminal.components.key_reader import (
+    read_key_unix,
+    read_key_windows,
+    restore_stdin_terminal,
+)
+
+CUSTOM_OPTION = "Or type your own..."
+_HEADER = "Ask User"
+_HINT = "Tab / Shift+Tab questions    ↑↓ options    Enter select    Esc cancel"
+_BREADCRUMB_SEP = " → "
+_MENU_LEADING_LINES = 1
+
+
+def format_ask_user_breadcrumb(
+    questions: tuple[AskUserQuestion, ...] | list[AskUserQuestion],
+    *,
+    current: int,
+    answered: tuple[bool, ...] | list[bool],
+) -> str:
+    """Breadcrumb: ● current or filled, ○ remaining."""
+    parts: list[str] = []
+    for index, question in enumerate(questions):
+        filled = bool(answered[index]) if index < len(answered) else False
+        glyph = "●" if filled or index == current else "○"
+        label = question.label.strip() or f"Q{index + 1}"
+        parts.append(f"{glyph} {label}")
+    return _BREADCRUMB_SEP.join(parts)
+
+
+def _option_labels(question: AskUserQuestion) -> list[str]:
+    return [*question.options, CUSTOM_OPTION]
+
+
+def _menu_height(question: AskUserQuestion) -> int:
+    # leading, header, breadcrumb, rule, question, choices, blank, hint
+    return _MENU_LEADING_LINES + 1 + 1 + 1 + 1 + len(_option_labels(question)) + 1 + 1
+
+
+def _breadcrumb_ansi(
+    questions: tuple[AskUserQuestion, ...],
+    *,
+    current: int,
+    answered: tuple[bool, ...],
+) -> str:
+    """Dim remaining steps; current step in body text so the bar is scannable."""
+    parts: list[str] = []
+    for index, question in enumerate(questions):
+        if index:
+            parts.append(
+                f"{ui_theme.DIM_COUNTER_ANSI}{_BREADCRUMB_SEP}{ui_theme.ANSI_RESET}"
+            )
+        filled = bool(answered[index]) if index < len(answered) else False
+        glyph = "●" if filled or index == current else "○"
+        label = question.label.strip() or f"Q{index + 1}"
+        style = ui_theme.TEXT_ANSI if index == current else ui_theme.DIM_COUNTER_ANSI
+        parts.append(f"{style}{glyph} {label}{ui_theme.ANSI_RESET}")
+    return "".join(parts)
+
+
+def _pad(sym: str, label: str, width: int) -> str:
+    content = f" {sym} {label}"
+    pad = width - len(content)
+    return content + (" " * pad if pad > 0 else "")
+
+
+def _draw_ask_user(
+    *,
+    questions: tuple[AskUserQuestion, ...],
+    current: int,
+    answers: list[str | None],
+    option_index: int,
+    erase_lines: int,
+) -> None:
+    question = questions[current]
+    labels = _option_labels(question)
+    answered = tuple(item is not None for item in answers)
+    crumb = _breadcrumb_ansi(questions, current=current, answered=answered)
+    width = menu_columns()
+    if erase_lines:
+        erase_menu_lines(erase_lines)
+    for _ in range(_MENU_LEADING_LINES):
+        write_menu_line()
+    write_menu_line(f"{ui_theme.PROMPT_ACCENT_ANSI}{_HEADER}{ui_theme.ANSI_RESET}")
+    write_menu_line(crumb)
+    write_menu_line(f"{ui_theme.DIM_COUNTER_ANSI}{'─' * width}{ui_theme.ANSI_RESET}")
+    write_menu_line(f"{ui_theme.TEXT_ANSI}{question.title}{ui_theme.ANSI_RESET}")
+    idx = option_index % len(labels)
+    for i, label in enumerate(labels):
+        here = i == idx
+        numbered = f"{i + 1}. {label}"
+        sym = ">" if here else " "
+        padded = _pad(sym, numbered, width)
+        if here:
+            write_menu_line(f"{ui_theme.MENU_SELECTION_ROW_ANSI}{padded}{ui_theme.ANSI_RESET}")
+        else:
+            write_menu_line(f"{ui_theme.DIM_COUNTER_ANSI}{padded}{ui_theme.ANSI_RESET}")
+    write_menu_line()
+    write_menu_line(f"{ui_theme.DIM_COUNTER_ANSI}{_HINT}{ui_theme.ANSI_RESET}")
+    sys.stdout.flush()
+
+
+def _erase_ask_user(question: AskUserQuestion) -> None:
+    erase_menu_lines(_menu_height(question))
+    sys.stdout.flush()
+
+
+def _read_wizard_action() -> str:
+    return read_key_windows() if os.name == "nt" else read_key_unix()
+
+
+def _next_unanswered(answers: list[str | None], start: int) -> int:
+    n = len(answers)
+    for offset in range(n):
+        index = (start + offset) % n
+        if answers[index] is None:
+            return index
+    return start
+
+
+def repl_ask_user(
+    questions: tuple[AskUserQuestion, ...] | list[AskUserQuestion],
+) -> tuple[str, ...] | None:
+    """Show the Ask User wizard; return selected labels or None on Esc.
+
+    Only call when :func:`repl_tty_interactive` is True. A ``CUSTOM_OPTION``
+    value means the user chose to type that answer themselves.
+    """
+    from surfaces.shared.terminal.components.cpr_stdin import drain_stale_cpr_bytes
+
+    items = tuple(questions)
+    if len(items) < 2 or not repl_tty_interactive():
+        return None
+    drain_stale_cpr_bytes()
+    answers: list[str | None] = [None] * len(items)
+    q_idx = 0
+    opt_idx = 0
+    first = True
+    current_height = 0
+    while True:
+        question = items[q_idx]
+        labels = _option_labels(question)
+        opt_idx %= len(labels)
+        _draw_ask_user(
+            questions=items,
+            current=q_idx,
+            answers=answers,
+            option_index=opt_idx,
+            erase_lines=0 if first else current_height,
+        )
+        first = False
+        current_height = _menu_height(question)
+        action = _read_wizard_action()
+        if action in ("tab", "right"):
+            q_idx = min(q_idx + 1, len(items) - 1)
+            opt_idx = 0
+            continue
+        if action in ("shift_tab", "left"):
+            q_idx = max(q_idx - 1, 0)
+            opt_idx = 0
+            continue
+        if action == "up":
+            opt_idx = (opt_idx - 1) % len(labels)
+            continue
+        if action == "down":
+            opt_idx = (opt_idx + 1) % len(labels)
+            continue
+        selected: int | None = None
+        if action == "enter":
+            selected = opt_idx
+        elif len(action) == 1 and action.isdigit():
+            picked = int(action) - 1
+            if 0 <= picked < len(labels):
+                selected = picked
+        if selected is not None:
+            answers[q_idx] = labels[selected]
+            if all(item is not None for item in answers):
+                _erase_ask_user(question)
+                restore_stdin_terminal()
+                return tuple(str(item) for item in answers)
+            q_idx = _next_unanswered(answers, q_idx + 1)
+            opt_idx = 0
+            continue
+        if action in ("cancel", "eof"):
+            _erase_ask_user(question)
+            restore_stdin_terminal()
+            return None
+        # ignore / unmapped
+
+
+__all__ = [
+    "CUSTOM_OPTION",
+    "format_ask_user_breadcrumb",
+    "repl_ask_user",
+]

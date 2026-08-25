@@ -20,9 +20,14 @@ from rich.console import Console
 from rich.text import Text
 
 from core.agent_harness.spi.accounting import SELF_RECORDING_ACTION_TOOL_NAMES
-from infrastructure.terminal.theme import BOLD_SKILL, DIM, HIGHLIGHT
+from infrastructure.terminal.theme import BOLD_SKILL, BRAND, DIM, HIGHLIGHT
 from surfaces.interactive_shell.runtime import Session
+from surfaces.interactive_shell.runtime.core.state import SpinnerState
 from surfaces.interactive_shell.ui.streaming import render_markdown_block
+from surfaces.interactive_shell.ui.task_plan import (
+    render_plan_updated,
+    task_plan_from_tool_args,
+)
 from surfaces.shared.terminal.output.console_state import get_investigation_spinner
 
 # Tools whose preview is just ``(label, single-arg)``. The display content is the
@@ -39,7 +44,7 @@ _SIMPLE_TOOL_LABELS: dict[str, tuple[str, str]] = {
     "task_cancel": ("cancel task", "target"),
     "cli_exec": ("opensre", "payload"),
     "code_implement": ("implementation", "task"),
-    "shell_run": ("shell", "command"),
+    "shell_run": ("Execute", "command"),
 }
 
 
@@ -54,11 +59,24 @@ def tool_call_display(tool_name: str, args: dict[str, Any]) -> tuple[str, str]:
         suite = str(args.get("suite", "")).strip()
         scenario = str(args.get("scenario", "")).strip()
         return "synthetic test", f"{suite}:{scenario}" if scenario else suite
+    if tool_name == "ask_user_choice":
+        questions = args.get("questions")
+        if isinstance(questions, list) and questions:
+            return "Ask User", f"{len(questions)} questions"
+        return "Ask User", str(args.get("title", "")).strip()
     simple = _SIMPLE_TOOL_LABELS.get(tool_name)
     if simple is not None:
         label, arg_key = simple
         return label, str(args.get(arg_key, "")).strip()
     return tool_name, json.dumps(args, default=str, sort_keys=True)
+
+
+def _is_choose_slash(data: dict[str, Any]) -> bool:
+    args = data.get("input")
+    if not isinstance(args, dict):
+        return False
+    command = str(args.get("command", "")).strip()
+    return command == "/choose" or command.startswith("/choose ")
 
 
 class ActionRenderObserver:
@@ -79,6 +97,7 @@ class ActionRenderObserver:
 
     def __call__(self, kind: str, data: dict[str, Any]) -> None:
         if kind == "llm_start":
+            self._set_spinner_phase(SpinnerState.EXECUTING_PHASE)
             self._advance_spinner_verb(data)
             return
         if kind == "message_update":
@@ -96,17 +115,33 @@ class ActionRenderObserver:
         if kind == "tool_end":
             if str(data.get("name", "")).strip() == "skill_view":
                 self._render_skill_end(data)
+            self._set_spinner_phase(SpinnerState.EXECUTING_PHASE)
             return
         if kind != "tool_start":
             return
         name = str(data.get("name", "")).strip()
         if not name or name == "assistant_handoff":
             return
+        self._set_spinner_phase(SpinnerState.INVOKING_TOOLS_PHASE)
         if name == "skill_view":
             self._render_skill_start(data)
+        elif name == "update_plan":
+            self._render_plan_update(data)
+        elif name == "ask_user_choice":
+            # The Ask User wizard is the UI; dumping the JSON payload is noise.
+            pass
+        elif name == "slash_invoke" and _is_choose_slash(data):
+            pass
+        else:
+            self._render_tool_invocation(name, data)
         if self.planned_count == 0 and name not in SELF_RECORDING_ACTION_TOOL_NAMES:
             self.session.record("cli_agent", self.message)
         self.planned_count += 1
+
+    def _set_spinner_phase(self, label: str) -> None:
+        spinner = get_investigation_spinner()
+        if spinner is not None:
+            spinner.set_phase(label)
 
     def _advance_spinner_verb(self, data: dict[str, Any]) -> None:
         """Rotate the prompt spinner's thinking verb every two agent steps.
@@ -153,6 +188,28 @@ class ActionRenderObserver:
         line.append(slug, style=HIGHLIGHT)
         self.console.print()
         self.console.print(line)
+
+    def _render_tool_invocation(self, name: str, data: dict[str, Any]) -> None:
+        """Show the running tool the way Factory does: orange verb, then payload."""
+        args = data.get("input")
+        label, content = tool_call_display(name, args if isinstance(args, dict) else {})
+        line = Text()
+        line.append(label, style=str(HIGHLIGHT))
+        if content:
+            line.append(f" {content}", style=str(BRAND))
+        self.console.print()
+        self.console.print(line)
+
+    def _render_plan_update(self, data: dict[str, Any]) -> None:
+        args = data.get("input")
+        plan = task_plan_from_tool_args(args if isinstance(args, dict) else {})
+        if plan is None:
+            self._render_tool_invocation("update_plan", data)
+            return
+        # Attach now so the prompt-region overlay redraws this turn, matching
+        # Factory: ``Plan updated`` in scrollback, checklist live above the spinner.
+        self.session.task_plan = plan
+        render_plan_updated(self.console)
 
     def _render_skill_end(self, data: dict[str, Any]) -> None:
         """Print the ``↳`` child line under the skill's ``tool_start`` parent."""

@@ -169,6 +169,7 @@ include = [
 "surfaces.shared" = ["sample_alerts/*.json"]
 "core.agent_harness.prompts" = ["skills/**/*.md"]
 "core.agent_harness.prompts.action" = ["*.md"]
+"core.agent_harness.task_plan" = ["*.md"]
 "integrations" = ["**/SKILL.md", "yandex_cloud/api_index.json"]
 "tools" = ["**/SKILL.md"]
 

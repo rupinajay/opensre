@@ -21,7 +21,7 @@ from rich.markup import escape
 import infrastructure.terminal.theme as ui_theme
 from surfaces.shared.terminal.components.key_reader import read_key_unix, read_key_windows
 
-_HINT = "↑↓/j/k/Tab  Enter/Space  Esc/q"
+_HINT = "↑↓ navigate    Enter select    Esc cancel"
 CRUMB_SEP = "  ›  "
 # Blank line after the submitted slash line before the menu header (all pickers).
 _MENU_LEADING_LINES = 1
@@ -162,8 +162,9 @@ def _draw_menu(
     # choices
     for i, label in enumerate(labels):
         here = i == index
+        numbered = f"{i + 1}. {label}"
         sym = ">" if here else " "
-        padded = _pad(sym, label, w)
+        padded = _pad(sym, numbered, w)
         if here:
             write_menu_line(f"{ui_theme.MENU_SELECTION_ROW_ANSI}{padded}{ui_theme.ANSI_RESET}")
         else:
@@ -265,8 +266,8 @@ def print_valid_choice_list(
     if not choices:
         return
     console.print(f"[{ui_theme.SECONDARY}]{title}[/]")
-    for choice in choices:
-        console.print(f"[{ui_theme.SECONDARY}]  - {escape(choice)}[/]")
+    for index, choice in enumerate(choices, start=1):
+        console.print(f"[{ui_theme.SECONDARY}]  {index}. {escape(choice)}[/]")
 
 
 __all__ = [

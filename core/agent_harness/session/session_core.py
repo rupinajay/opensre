@@ -34,6 +34,7 @@ from core.agent_harness.session.pending_offer import (
 from core.agent_harness.session.persistence.contracts import SessionStore
 from core.agent_harness.session.persistence.jsonl_store import JsonlSessionStore
 from core.agent_harness.session_goal.goal import SessionGoal
+from core.agent_harness.task_plan.plan import TaskPlan
 from core.state import MutableAgentState
 from infrastructure.scheduling.task_registry import TaskRegistry
 
@@ -154,6 +155,14 @@ class SessionCore:
 
     session_goal: SessionGoal | None = None
     """Outer cross-turn goal (multi-step / keep-going). Distinct from ReAct Goal."""
+
+    task_plan: TaskPlan | None = None
+    """Live agent execution checklist for this workload (``update_plan``).
+
+    Distinct from ``session_goal`` (``/goal``) and from durable human work
+    items. Injected into the action prompt so transcript compaction cannot
+    drop the plan.
+    """
 
     offered_upgrade_ctas: set[str] = field(default_factory=set)
     """Session-scoped UpgradeCTA dedupe keys (``cta:service_id``)."""
@@ -406,6 +415,7 @@ class SessionCore:
         self.pending_investigation_offer = None
         self.pending_integration_setup_offer = None
         self.session_goal = None
+        self.task_plan = None
         self.offered_upgrade_ctas.clear()
         self.pending_user_choice = None
         self.pending_recovery_note = None

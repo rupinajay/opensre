@@ -16,6 +16,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
+from config.constants.repl_autonomy import DEFAULT_AUTO_LEVEL, AutoLevel
 from surfaces.interactive_shell.session.background_investigations import (
     BackgroundInvestigationRecord,
     BackgroundNotificationPreferences,
@@ -44,6 +45,9 @@ class TerminalSession:
 
     trust_mode: bool = False
     """When True, confirmation prompts for elevated REPL actions are skipped."""
+
+    auto_level: AutoLevel = DEFAULT_AUTO_LEVEL
+    """Factory-style Auto (Off|Low|Med|High) shown above the input box."""
 
     prompt_history_backend: History | None = None
     """The live ``prompt_toolkit.History`` object backing the input prompt.
@@ -93,6 +97,13 @@ class TerminalSession:
     Set when ``/goal set`` (or similar) queues the condition and the prompt
     loop accepts it without Enter. Cleared when the submitted line is painted
     so the work turn can show a distinct ``↗ /goal`` marker above ``[N] ❯``.
+    """
+
+    awaiting_handoff_answer: bool = False
+    """True when the next submitted line answers a human hand-off question.
+
+    Set by ``ask_user_choice`` (and the ``/choose`` pick). Cleared when the
+    submitted prompt is painted so the answer uses the brand colour.
     """
 
     exclusive_stdin_active: bool = False

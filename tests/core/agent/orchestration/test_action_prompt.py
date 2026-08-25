@@ -103,8 +103,9 @@ def test_system_prompt_base_is_markdown_backed_opensre_prompt() -> None:
     assert "senior production engineer mapping intent to tools" in prompt
     assert "GPT-5.2" not in prompt
     assert "Codex CLI" not in prompt
-    assert "update_plan" not in prompt
     assert "apply_patch" not in prompt
+    assert "- update_plan —" in prompt
+    assert "- ask_user_choice —" in prompt
 
 
 def test_system_prompt_slack_fragment_documents_roster_followup() -> None:

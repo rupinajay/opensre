@@ -35,6 +35,8 @@ _ENTRIES_WITH_ROUTING_RULES = frozenset(
         "llm_set_provider",
         "memory_remember",
         "skill_view",
+        "ask_user_choice",
+        "update_plan",
         "work_task_schedule_checkin",
     }
 )

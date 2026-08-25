@@ -32,6 +32,8 @@ _CORE_FIELDS = (
     "pending_recovery_note",
     # Outer multi-turn goal, plus the evidence-tier upgrade CTA it can offer.
     "session_goal",
+    # Live task-plan checklist, persisted so it survives transcript compaction.
+    "task_plan",
     "pending_integration_setup_offer",
     "offered_upgrade_ctas",
     # SessionGoal gather carry: tools/sources that failed at transport level.

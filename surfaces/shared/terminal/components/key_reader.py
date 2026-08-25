@@ -6,7 +6,8 @@ terminal I/O lives in one place.
 
 Return values from :func:`read_key_unix` / :func:`read_key_windows`:
   ``"up"``, ``"down"``, ``"enter"``, ``"cancel"``, ``"tab"``,
-  ``"right"``, ``"left"``, ``"eof"``, ``"ignore"``.
+  ``"shift_tab"``, ``"right"``, ``"left"``, ``"1"``–``"9"``, ``"eof"``,
+  ``"ignore"``.
 """
 
 from __future__ import annotations
@@ -54,8 +55,8 @@ def read_key_unix(*, also_cancel: tuple[bytes, ...] = ()) -> str:
     """Read one logical keypress in raw mode; return a normalised key name.
 
     Possible return values: ``"up"``, ``"down"``, ``"enter"``,
-    ``"cancel"``, ``"tab"``, ``"right"``, ``"left"``, ``"eof"``,
-    ``"ignore"``.
+    ``"cancel"``, ``"tab"``, ``"shift_tab"``, ``"right"``, ``"left"``,
+    ``"1"``–``"9"``, ``"eof"``, ``"ignore"``.
 
     ``also_cancel`` treats additional single-byte keys as ``"cancel"`` (e.g.
     ``(b"s", b"S")`` for an explicit skip shortcut).
@@ -78,6 +79,8 @@ def read_key_unix(*, also_cancel: tuple[bytes, ...] = ()) -> str:
             return "enter"
         if b == 9:  # Tab
             return "tab"
+        if 0x31 <= b <= 0x39:  # 1-9
+            return chr(b)
         if ch in (b"j", b"J"):
             return "down"
         if ch in (b"k", b"K"):
@@ -97,6 +100,8 @@ def read_key_unix(*, also_cancel: tuple[bytes, ...] = ()) -> str:
                         return "right"
                     if arr == b"D":
                         return "left"
+                    if arr == b"Z":
+                        return "shift_tab"
                     # Not an arrow key — drain the rest of the CSI sequence so
                     # bytes like "0;1R" from a CPR (ESC[row;colR) don't leak into
                     # the next read or the prompt buffer as literal characters.
@@ -115,8 +120,8 @@ def read_key_windows(*, also_cancel: tuple[bytes, ...] = ()) -> str:
     """Read one logical keypress on Windows; return a normalised key name.
 
     Possible return values: ``"up"``, ``"down"``, ``"enter"``,
-    ``"cancel"``, ``"tab"``, ``"right"``, ``"left"``, ``"eof"``,
-    ``"ignore"``.
+    ``"cancel"``, ``"tab"``, ``"shift_tab"``, ``"right"``, ``"left"``,
+    ``"1"``–``"9"``, ``"eof"``, ``"ignore"``.
 
     ``also_cancel`` treats additional single-byte keys as ``"cancel"``.
     """
@@ -129,6 +134,8 @@ def read_key_windows(*, also_cancel: tuple[bytes, ...] = ()) -> str:
         return "enter"
     if ch == b"\t":
         return "tab"
+    if len(ch) == 1 and b"1" <= ch <= b"9":
+        return str(ch.decode("ascii"))
     if ch in (b"j", b"J"):
         return "down"
     if ch in (b"k", b"K"):
@@ -145,6 +152,8 @@ def read_key_windows(*, also_cancel: tuple[bytes, ...] = ()) -> str:
             return "right"
         if ch2 == b"K":
             return "left"
+        if ch2 == b"\x0f":
+            return "shift_tab"
         return "ignore"
     return "ignore"
 

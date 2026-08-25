@@ -3,7 +3,9 @@
 The stable base lives in ``opensre_system_prompt.md`` (loaded at import time)
 so the long planner prompt is editable as data and packaged with the wheel.
 That file is the OpenSRE action-planner contract (handoff vs investigation,
-compound turns, slash mapping) — not a coding-agent / Codex clone.
+compound turns, slash mapping). Live execution checklists live in the
+``update_plan`` tool plus ``planning_instructions.md`` — not a coding-agent
+clone (no apply_patch / AGENTS.md spec).
 """
 
 from __future__ import annotations

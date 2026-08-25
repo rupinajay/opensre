@@ -18,6 +18,7 @@ from surfaces.interactive_shell.command_registry.investigation import (
 from surfaces.interactive_shell.command_registry.loops_cmds import _LOOPS_FIRST_ARGS
 from surfaces.interactive_shell.command_registry.model.command import _MODEL_FIRST_ARGS
 from surfaces.interactive_shell.command_registry.settings_cmds import (
+    _AUTO_FIRST_ARGS,
     _TRUST_FIRST_ARGS,
     _VERBOSE_FIRST_ARGS,
 )
@@ -65,6 +66,7 @@ def test_registry_first_arg_completion_hints_co_located_with_handlers() -> None:
         "/mcp": _MCP_FIRST_ARGS,
         "/investigate": _INVESTIGATE_FIRST_ARGS,
         "/template": _TEMPLATE_FIRST_ARGS,
+        "/auto": _AUTO_FIRST_ARGS,
         "/trust": _TRUST_FIRST_ARGS,
         "/verbose": _VERBOSE_FIRST_ARGS,
         "/loops": _LOOPS_FIRST_ARGS,

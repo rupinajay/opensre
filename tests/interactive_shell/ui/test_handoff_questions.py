@@ -1,0 +1,86 @@
+"""Human hand-off questions vs answers are styled differently."""
+
+from __future__ import annotations
+
+import io
+
+from rich.console import Console
+
+from surfaces.interactive_shell.session import Session
+from surfaces.interactive_shell.ui.handoff_questions import (
+    is_handoff_question,
+    last_assistant_asked_handoff,
+    try_render_ask_user_submission,
+)
+from surfaces.interactive_shell.ui.input_prompt.rendering import render_submitted_prompt
+from surfaces.interactive_shell.ui.streaming.renderer import render_markdown_block
+
+
+def test_short_closing_question_is_a_handoff() -> None:
+    assert is_handoff_question("Which environment should I investigate first?")
+    assert is_handoff_question("**Want me to:** run a full investigation?")
+    assert not is_handoff_question("checkout is returning 502s")
+    assert not is_handoff_question("### [1/8] Prerequisite checks")
+
+
+def test_render_markdown_block_highlights_a_question() -> None:
+    buffer = io.StringIO()
+    console = Console(file=buffer, force_terminal=False, highlight=False, width=80)
+    render_markdown_block(console, "Which environment should I investigate first?")
+    output = buffer.getvalue()
+    assert "?" in output
+    assert "Which environment should I investigate first?" in output
+
+
+def test_submitted_answer_to_a_handoff_is_marked() -> None:
+    session = Session()
+    session.cli_agent_messages = [
+        ("user", "checkout is 502ing"),
+        ("assistant", "Which environment should I investigate first?"),
+    ]
+    buffer = io.StringIO()
+    console = Console(file=buffer, force_terminal=False, highlight=False, width=80)
+    assert last_assistant_asked_handoff(list(session.cli_agent_messages))
+    render_submitted_prompt(console, session, "staging")
+    output = buffer.getvalue()
+    assert "↗ answer" in output
+    assert "staging" in output
+
+
+def test_ask_user_answers_render_as_numbered_qa() -> None:
+    session = Session()
+    session.terminal.awaiting_handoff_answer = True
+    buffer = io.StringIO()
+    console = Console(file=buffer, force_terminal=False, highlight=False, width=80)
+    text = (
+        "1. Where does the /api/orders service live?\n"
+        "Hypothetical/demo scenario, no real code\n"
+        "\n"
+        "2. What's the time window of the p99 regression?\n"
+        "Last 7 days"
+    )
+    render_submitted_prompt(console, session, text)
+    output = buffer.getvalue()
+    assert "Where does the /api/orders service live?" in output
+    assert "Hypothetical/demo scenario, no real code" in output
+    assert "Last 7 days" in output
+    assert "❯" not in output
+
+
+def test_choose_slash_is_not_echoed() -> None:
+    session = Session()
+    session.terminal.awaiting_handoff_answer = True
+    session.terminal.last_input_autosubmitted = True
+    buffer = io.StringIO()
+    console = Console(file=buffer, force_terminal=False, highlight=False, width=80)
+    render_submitted_prompt(console, session, "/choose")
+    assert session.terminal.awaiting_handoff_answer is True
+    assert buffer.getvalue() == ""
+    assert session.terminal.submitted_turn_count == 0
+
+
+def test_try_render_rejects_a_single_choice_label() -> None:
+    buffer = io.StringIO()
+    console = Console(file=buffer, force_terminal=False, highlight=False, width=80)
+    assert try_render_ask_user_submission(console, "Commit the changes") is False
+    assert buffer.getvalue() == ""

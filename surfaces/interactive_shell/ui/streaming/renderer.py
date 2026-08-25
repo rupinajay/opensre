@@ -54,10 +54,19 @@ def render_markdown_block(console: Console, text: str) -> None:
 
     The single rendering path for model prose that arrives whole (not
     chunk-streamed) — e.g. the action agent's intermediate phase headers —
-    so every markdown surface shares one escaping/theme policy.
+    so every markdown surface shares one escaping/theme policy. Human
+    hand-off questions use the highlight colour instead of body markdown.
     """
     visible = strip_session_goal_progress_tags(text)
     if not visible.strip():
+        return
+    from surfaces.interactive_shell.ui.handoff_questions import (
+        is_handoff_question,
+        render_handoff_question,
+    )
+
+    if is_handoff_question(visible):
+        render_handoff_question(console, visible)
         return
     with console.use_theme(ui_theme.MARKDOWN_THEME):
         console.print(_build_markdown_block(visible))

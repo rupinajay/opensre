@@ -37,7 +37,7 @@ def test_draw_menu_uses_carriage_return_newlines(monkeypatch) -> None:
     assert all(rendered[index - 1] == "\r" for index, char in enumerate(rendered) if char == "\n")
     assert "\rintegrations" in plain
     assert "\r/integrations" in plain
-    assert "\r > /integrations list" in plain
+    assert "\r > 1. /integrations list" in plain
 
 
 def test_erase_menu_block_resets_to_column_zero(monkeypatch) -> None:
@@ -111,7 +111,7 @@ def test_repl_choose_one_starts_at_initial_value(monkeypatch) -> None:
 
     assert result == "blue"
     plain = _ANSI_RE.sub("", out.getvalue())
-    assert "> blue (current)" in plain
+    assert "> 2. blue (current)" in plain
 
 
 def test_read_action_ignores_left_arrow(monkeypatch) -> None:

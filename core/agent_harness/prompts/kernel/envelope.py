@@ -22,7 +22,9 @@ class PromptBlockId(StrEnum):
     ACTION_VENDOR_FRAGMENTS = "action-agent-vendor-fragments"
     ACTION_RUNTIME_FACTS = "action-agent-runtime-facts"
     ACTION_SKILLS = "action-agent-skills"
+    ACTION_PLANNING_INSTRUCTIONS = "action-agent-planning-instructions"
     ACTION_SETUP_STATE = "action-agent-setup-state"
+    CURRENT_TASK_PLAN = "current-task-plan"
 
     # Gather envelope.
     GATHER_SYSTEM_BASE = "gather-system-base"

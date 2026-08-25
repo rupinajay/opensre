@@ -53,8 +53,20 @@ def test_spinner_renders_elapsed_seconds_and_cancel_hint() -> None:
 
     rendered = spinner.inline_spinner_ansi()
 
-    assert "(8s)" in rendered
-    assert "esc to cancel" in rendered
+    assert "[ 8s]" in rendered
+    assert "(Press ESC to stop)" in rendered
+    assert SpinnerState.EXECUTING_PHASE in rendered
+
+
+def test_spinner_invoking_tools_phase_matches_factory_copy() -> None:
+    spinner = SpinnerState()
+    spinner.start()
+    spinner.set_phase(SpinnerState.INVOKING_TOOLS_PHASE)
+
+    rendered = spinner.inline_spinner_ansi()
+
+    assert SpinnerState.INVOKING_TOOLS_PHASE in rendered
+    assert "(Press ESC to stop)" in rendered
 
 
 def test_spinner_empty_when_not_streaming() -> None:

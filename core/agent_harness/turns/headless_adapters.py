@@ -47,6 +47,8 @@ class InMemorySessionState:
     vcs_repo_scopes: dict[str, tuple[str, ...]] = field(default_factory=dict)
     records: list[tuple[str, str, bool]] = field(default_factory=list)
     available_capabilities: dict[str, Any] = field(default_factory=dict)
+    task_plan: Any | None = None
+    """Live ``update_plan`` checklist (same field SessionCore carries)."""
 
     def record(
         self,
