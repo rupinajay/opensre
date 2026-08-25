@@ -62,3 +62,35 @@ def test_goal_reviewer_fails_open_on_free_text() -> None:
     goal = build_goal_reviewer(llm, "delete the cron", executed_tool_names=["shell_run"])
     assert goal.verify is not None
     assert goal.verify(_obs()) is True
+
+
+def test_goal_reviewer_rejects_plan_only_after_ask_user_answers() -> None:
+    from core.agent.goals import should_accept_with_goal
+    from core.agent_harness.session.pending_choice import (
+        AskUserQuestion,
+        format_ask_user_answers,
+    )
+
+    answers = format_ask_user_answers(
+        (
+            AskUserQuestion(label="Env", title="Where is it?", options=("Prod", "Dev")),
+            AskUserQuestion(label="Window", title="What window?", options=("24h", "7d")),
+        ),
+        ("Dev", "24h"),
+    )
+    llm = _ScriptedLLM('{"verdict": "GOAL_REACHED"}')
+    names = ["update_plan"]
+    goal = build_goal_reviewer(llm, answers, executed_tool_names=names)
+    assert goal.verify is not None
+    assert goal.verify(_obs()) is False
+    assert llm.invokes == 0
+    accept, nudge = should_accept_with_goal(
+        goal,
+        final_text="Plan created with all five steps pending.",
+        evidence_count=1,
+        iteration=0,
+        max_iterations=8,
+    )
+    assert accept is False
+    assert nudge is not None
+    assert "go-ahead" in nudge

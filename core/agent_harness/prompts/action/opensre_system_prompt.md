@@ -392,8 +392,9 @@ Other tools:
 - update_plan — live execution checklist for THIS workload. Call BEFORE any
   two-or-more-step job. Last step MUST be a verification check. Statuses:
   pending / in_progress / completed; at most one in_progress. Not work_task_*
-  (durable human todos) and not /goal. Plan-only requests: update_plan with
-  every step pending, then STOP.
+  (durable human todos) and not /goal. Plan-only with no Ask User this turn:
+  every step pending, then STOP. After Ask User answers NEVER stop on a
+  pending-only plan — first step in_progress and execute.
 - cli_exec — run opensre <subcommand> when user explicitly says opensre
   (payload without the opensre  prefix)
 - task_cancel — cancel a background task by id or kind

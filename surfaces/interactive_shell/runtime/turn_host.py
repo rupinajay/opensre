@@ -153,6 +153,12 @@ async def run_agent_turn(runtime: AgentTurnResources, text: str) -> None:
         set_investigation_spinner(None)
         runtime.session.terminal.exclusive_stdin_active = False
         runtime.session.terminal.dispatch_active = False
+        # Natural-language turns keep the next prompt open concurrently.
+        # ``ask_user_choice`` queues ``/choose`` while ``dispatch_active`` is
+        # set, so prompt refresh defers. Kick it now that the turn is idle
+        # or the wizard never opens and the user sits at an empty prompt.
+        if runtime.session.terminal.pending_prompt_autosubmit:
+            runtime.session.terminal.notify_prompt_changed()
         emit_thread_boundary(
             runtime.session.session_id,
             name="turn_boundary",

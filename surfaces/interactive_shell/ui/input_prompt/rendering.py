@@ -12,9 +12,11 @@ from surfaces.interactive_shell.runtime import Session
 from surfaces.interactive_shell.ui.handoff_questions import (
     handoff_answer_style,
     last_assistant_asked_handoff,
+    render_ask_user_qa,
     render_handoff_answer_marker,
     try_render_ask_user_submission,
 )
+from core.agent_harness.session.pending_choice import parse_ask_user_answers
 from surfaces.interactive_shell.ui.input_prompt.completion import completion_preview_hint_ansi
 from surfaces.interactive_shell.ui.input_prompt.layout import (
     _clip_text,
@@ -168,4 +170,6 @@ def resolve_prompt_placeholder(session: Session) -> ANSI:
         parts.append(f"resumed: {_short_meta(session.resumed_from_name, max_len=32)}")
     if parts:
         return ANSI(f"{ui_theme.ANSI_DIM}{' · '.join(parts)}{ui_theme.ANSI_RESET}")
+    if session.pending_user_choice is not None:
+        return ANSI(f"{ui_theme.ANSI_DIM}Ask User menu ready — press Enter{ui_theme.ANSI_RESET}")
     return _DEFAULT_PLACEHOLDER_ANSI

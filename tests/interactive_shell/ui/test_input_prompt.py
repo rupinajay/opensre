@@ -87,6 +87,20 @@ class TestPromptRefreshAutoSubmit:
             session.terminal.pending_prompt_default == "How many Windows users in the last 7 days?"
         )
 
+    def test_deferred_auto_command_submits_when_dispatch_ends(self) -> None:
+        """ask_user_choice queues /choose mid-turn; the idle prompt must submit it."""
+        session = Session()
+        app = _RefreshFakeApp()
+        wire_prompt_refresh(session, app, _RefreshFakeLoop())
+        session.terminal.dispatch_active = True
+        session.terminal.set_auto_command("/choose")
+        assert app.current_buffer.submitted is False
+        session.terminal.dispatch_active = False
+        session.terminal.notify_prompt_changed()
+        assert app.current_buffer.text == "/choose"
+        assert app.current_buffer.submitted is True
+        assert session.terminal.pending_prompt_default is None
+
     def test_plain_prefill_does_not_auto_submit(self) -> None:
         """A prefill without the auto-submit flag must wait for the user (Enter)."""
         session = Session()
@@ -248,6 +262,18 @@ class TestResolvePromptPlaceholder:
         assert "1 task running" in text
         assert "resumed: redis-incident" in text
         assert " · " in text
+
+    def test_ask_user_menu_ready_when_choice_is_pending(self) -> None:
+        from core.agent_harness.session.pending_choice import PendingUserChoice
+
+        session = Session()
+        session.pending_user_choice = PendingUserChoice(
+            title="Ask User",
+            options=("Production", "Staging"),
+        )
+        text = _placeholder_text(session)
+        assert "Ask User menu ready" in text
+        assert DEFAULT_PLACEHOLDER_TEXT not in text
 
 
 @dataclass

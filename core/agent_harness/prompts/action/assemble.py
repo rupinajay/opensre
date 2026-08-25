@@ -22,6 +22,7 @@ from core.agent_harness.prompts.memory.conversation import (
 from core.agent_harness.prompts.runtime_facts import render_static_runtime_facts
 from core.agent_harness.prompts.skills.loader import load_skills_index
 from core.agent_harness.task_plan.prompt import (
+    ask_user_answered_block,
     current_task_plan_block,
     load_planning_instructions,
 )
@@ -173,6 +174,16 @@ def build_action_system_prompt_envelope(turn_snapshot: TurnSnapshot) -> PromptEn
             tier=PromptTier.VOLATILE,
             content=memory_block,
             provenance="core.domain.memory",
+        )
+    )
+    blocks.extend(
+        _optional_block(
+            id=PromptBlockId.ASK_USER_ANSWERED,
+            kind=PromptBlockKind.RULE,
+            tier=PromptTier.EPHEMERAL,
+            content=ask_user_answered_block(turn_snapshot.text),
+            provenance="core.agent_harness.task_plan.prompt",
+            suffix="\n\n",
         )
     )
     blocks.append(

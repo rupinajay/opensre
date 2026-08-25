@@ -10,8 +10,16 @@ from __future__ import annotations
 from functools import lru_cache
 from pathlib import Path
 
+from core.agent_harness.session.pending_choice import parse_ask_user_answers
 from core.agent_harness.task_plan.plan import PlanStepStatus, TaskPlan
 from core.agent_harness.task_plan.progress import format_task_plan_plain
+
+ASK_USER_ANSWERED_GUIDANCE = (
+    "ASK USER JUST ANSWERED (this turn). Answering the menu is the go-ahead. "
+    "Ignore any earlier 'don't run' / 'plan only' in conversation. Call "
+    "update_plan with the first step in_progress, then execute that step now. "
+    "Do not stop with every step pending."
+)
 
 _INSTRUCTIONS_FILENAME = "planning_instructions.md"
 
@@ -21,6 +29,13 @@ def load_planning_instructions() -> str:
     """Return the bundled planning-instruction markdown."""
     path = Path(__file__).with_name(_INSTRUCTIONS_FILENAME)
     return path.read_text(encoding="utf-8")
+
+
+def ask_user_answered_block(text: str) -> str:
+    """Ephemeral start-now rule when this turn is structured Ask User answers."""
+    if not parse_ask_user_answers(text):
+        return ""
+    return ASK_USER_ANSWERED_GUIDANCE
 
 
 def current_task_plan_block(plan: TaskPlan | None) -> str:
@@ -48,7 +63,9 @@ def current_task_plan_block(plan: TaskPlan | None) -> str:
 
 
 __all__ = [
+    "ASK_USER_ANSWERED_GUIDANCE",
     "_INSTRUCTIONS_FILENAME",
+    "ask_user_answered_block",
     "current_task_plan_block",
     "load_planning_instructions",
 ]

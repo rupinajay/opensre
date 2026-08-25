@@ -25,6 +25,22 @@ def flush_stdin_unix() -> None:
         termios.tcflush(sys.stdin.fileno(), termios.TCIFLUSH)  # type: ignore[attr-defined]
 
 
+def flush_pending_input() -> None:
+    """Drop leftover keypresses (Enter from the previous prompt, CPR, etc.).
+
+    Ask User must not treat the newline that submitted the last prompt — or
+    the ``/choose`` autosubmit — as answering every question with option 1.
+    """
+    flush_stdin_unix()
+    if os.name != "nt":
+        return
+    with contextlib.suppress(Exception):
+        import msvcrt  # type: ignore[import,attr-defined]
+
+        while msvcrt.kbhit():  # type: ignore[attr-defined]
+            msvcrt.getwch()  # type: ignore[attr-defined]
+
+
 def restore_stdin_terminal() -> None:
     """Return stdin to canonical echo mode after Live/raw investigation UI.
 
@@ -51,7 +67,11 @@ def restore_stdin_terminal() -> None:
         termios.tcflush(fd, termios.TCIFLUSH)  # type: ignore[attr-defined]
 
 
-def read_key_unix(*, also_cancel: tuple[bytes, ...] = ()) -> str:
+def read_key_unix(
+    *,
+    also_cancel: tuple[bytes, ...] = (),
+    space_confirms: bool = True,
+) -> str:
     """Read one logical keypress in raw mode; return a normalised key name.
 
     Possible return values: ``"up"``, ``"down"``, ``"enter"``,
@@ -75,7 +95,7 @@ def read_key_unix(*, also_cancel: tuple[bytes, ...] = ()) -> str:
         b = ch[0]
         if b in (3, 4) or ch in also_cancel:  # Ctrl-C / Ctrl-D / caller shortcuts
             return "cancel"
-        if b in (10, 13, 32):  # LF / CR / Space
+        if b in (10, 13) or (space_confirms and b == 32):  # LF / CR / optional Space
             return "enter"
         if b == 9:  # Tab
             return "tab"

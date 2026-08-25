@@ -20,6 +20,7 @@ from surfaces.shared.terminal.components.choice_menu import (
     write_menu_line,
 )
 from surfaces.shared.terminal.components.key_reader import (
+    flush_pending_input,
     read_key_unix,
     read_key_windows,
     restore_stdin_terminal,

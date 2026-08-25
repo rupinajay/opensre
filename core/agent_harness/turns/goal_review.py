@@ -32,6 +32,7 @@ from typing import Any
 
 from core.agent.goals import Goal, GoalObservation
 from core.agent_harness.closed_llm_verdict import invoke_closed_goal_verdict
+from core.agent_harness.session.pending_choice import parse_ask_user_answers
 from core.agent_harness.turns.gather_discovery_budget import (
     bridge_tool_target,
     is_gather_discovery_call,
@@ -55,9 +56,20 @@ _MAX_GOAL_REVIEWS = 1
 _SKIP_REVIEW_TOOL_NAMES = frozenset(
     {
         "alert_sample",
+        "ask_user_choice",
         "assistant_handoff",
         "investigation_start",
     }
+)
+
+# After Ask User answers, writing a pending-only plan is not done — the menu
+# answer is the go-ahead to execute. update_plan alone must not conclude.
+_PLANNING_ONLY_TOOLS = frozenset({"update_plan"})
+_ASK_USER_GO_AHEAD_NUDGE = (
+    "The user answered Ask User. That is the go-ahead to start. "
+    "Call update_plan with the first step in_progress, then execute that "
+    "step now (queries, lookups, investigation). Do not stop with every "
+    "step pending."
 )
 
 _REVIEW_SYSTEM_PROMPT = (
@@ -190,6 +202,8 @@ class _LLMGoalReviewer:
             names = [name for name, _ in self.executed_tool_calls]
         if any(name in self.skip_tool_names for name in names):
             return True
+        if _plan_only_after_ask_user(self.user_goal, names):
+            return False
         if self.reject_discovery_only and _gather_ran_only_discovery(self.executed_tool_calls):
             return False
         if self.reviews_remaining <= 0:
@@ -225,6 +239,24 @@ class _LLMGoalReviewer:
         )
 
 
+def _plan_only_after_ask_user(user_goal: str, executed_names: list[str]) -> bool:
+    """True when Ask User answers arrived and this turn only wrote a plan."""
+    if not executed_names or not parse_ask_user_answers(user_goal):
+        return False
+    return all(name in _PLANNING_ONLY_TOOLS for name in executed_names)
+
+
+def _action_goal_nudge(user_goal: str, executed_tool_names: list[str]) -> str:
+    if _plan_only_after_ask_user(user_goal, executed_tool_names):
+        return _ASK_USER_GO_AHEAD_NUDGE
+    return (
+        f"Goal not yet met: {user_goal}. "
+        f"Success criteria: {_GOAL_SUCCESS_CRITERIA}. "
+        "Continue gathering evidence or taking actions until the criteria are "
+        "satisfied, then conclude with a clear answer."
+    )
+
+
 def build_goal_reviewer(
     llm: AgentLLMClient,
     user_goal: str,
@@ -243,6 +275,7 @@ def build_goal_reviewer(
             user_goal=user_goal,
             executed_tool_names=executed_tool_names,
         ),
+        nudge=lambda _observation: _action_goal_nudge(user_goal, executed_tool_names),
     )
 
 

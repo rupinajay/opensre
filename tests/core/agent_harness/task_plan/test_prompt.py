@@ -65,3 +65,37 @@ def test_current_plan_is_ephemeral_so_compaction_cannot_drop_it() -> None:
     cached = envelope.render_cached()
     assert "Plan · 2/3" not in cached
     assert "Plan · 2/3" in envelope.render()
+
+
+def test_ask_user_answers_inject_start_now_block() -> None:
+    from core.agent_harness.session.pending_choice import (
+        AskUserQuestion,
+        format_ask_user_answers,
+    )
+    from core.agent_harness.task_plan.prompt import ASK_USER_ANSWERED_GUIDANCE
+
+    answers = format_ask_user_answers(
+        (
+            AskUserQuestion(label="Env", title="Where is it?", options=("Prod", "Dev")),
+            AskUserQuestion(label="Window", title="What window?", options=("24h", "7d")),
+        ),
+        ("Dev", "24h"),
+    )
+    snapshot = TurnSnapshot(
+        text=answers,
+        conversation_messages=(),
+        configured_integrations=(),
+        configured_integrations_known=True,
+        last_state=None,
+        last_synthetic_observation_path=None,
+        reasoning_effort=None,
+    )
+    envelope = build_action_system_prompt_envelope(snapshot)
+    block = envelope.require_block(PromptBlockId.ASK_USER_ANSWERED)
+    assert block.tier == PromptTier.EPHEMERAL
+    assert ASK_USER_ANSWERED_GUIDANCE in block.content
+    assert ASK_USER_ANSWERED_GUIDANCE not in envelope.render_cached()
+    assert ASK_USER_ANSWERED_GUIDANCE in envelope.render()
+    assert envelope.block(PromptBlockId.ASK_USER_ANSWERED) is not None
+    idle = build_action_system_prompt_envelope(_ctx())
+    assert idle.block(PromptBlockId.ASK_USER_ANSWERED) is None

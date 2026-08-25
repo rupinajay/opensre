@@ -25,6 +25,7 @@ class PromptBlockId(StrEnum):
     ACTION_PLANNING_INSTRUCTIONS = "action-agent-planning-instructions"
     ACTION_SETUP_STATE = "action-agent-setup-state"
     CURRENT_TASK_PLAN = "current-task-plan"
+    ASK_USER_ANSWERED = "ask-user-answered"
 
     # Gather envelope.
     GATHER_SYSTEM_BASE = "gather-system-base"
