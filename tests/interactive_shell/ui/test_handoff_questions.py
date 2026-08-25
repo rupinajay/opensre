@@ -61,10 +61,13 @@ def test_ask_user_answers_render_as_numbered_qa() -> None:
     )
     render_submitted_prompt(console, session, text)
     output = buffer.getvalue()
+    assert "↗ You answered" in output
+    assert "[1] " in output
+    assert "❯" in output
     assert "Where does the /api/orders service live?" in output
     assert "Hypothetical/demo scenario, no real code" in output
     assert "Last 7 days" in output
-    assert "❯" not in output
+    assert session.terminal.submitted_turn_count == 1
 
 
 def test_choose_slash_is_not_echoed() -> None:

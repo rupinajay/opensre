@@ -79,6 +79,10 @@ def test_wizard_enter_on_each_question_submits(monkeypatch) -> None:
         "surfaces.shared.terminal.components.cpr_stdin.drain_stale_cpr_bytes",
         lambda: None,
     )
+    monkeypatch.setattr(
+        "surfaces.interactive_shell.ui.ask_user.flush_pending_input",
+        lambda: None,
+    )
 
     picked = repl_ask_user(_QUESTIONS)
     assert picked == (
@@ -109,5 +113,44 @@ def test_wizard_esc_cancels(monkeypatch) -> None:
         "surfaces.shared.terminal.components.cpr_stdin.drain_stale_cpr_bytes",
         lambda: None,
     )
+    monkeypatch.setattr(
+        "surfaces.interactive_shell.ui.ask_user.flush_pending_input",
+        lambda: None,
+    )
 
     assert repl_ask_user(_QUESTIONS) is None
+
+
+def test_wizard_flushes_leftover_keys_before_reading(monkeypatch) -> None:
+    flushed = {"count": 0}
+
+    def _flush() -> None:
+        flushed["count"] += 1
+
+    actions = iter(["enter", "enter", "enter"])
+    monkeypatch.setattr(
+        "surfaces.interactive_shell.ui.ask_user.repl_tty_interactive",
+        lambda: True,
+    )
+    monkeypatch.setattr(
+        "surfaces.interactive_shell.ui.ask_user._read_wizard_action",
+        lambda: next(actions),
+    )
+    monkeypatch.setattr(
+        "surfaces.interactive_shell.ui.ask_user._draw_ask_user",
+        lambda **_kwargs: None,
+    )
+    monkeypatch.setattr(
+        "surfaces.interactive_shell.ui.ask_user._erase_ask_user",
+        lambda _question: None,
+    )
+    monkeypatch.setattr(
+        "surfaces.shared.terminal.components.cpr_stdin.drain_stale_cpr_bytes",
+        lambda: None,
+    )
+    monkeypatch.setattr("surfaces.interactive_shell.ui.ask_user.flush_pending_input", _flush)
+
+    assert repl_ask_user(_QUESTIONS) is not None
+    # Once before the loop, once after the first draw — leftover Enter from
+    # the previous prompt must not auto-select option 1 on every question.
+    assert flushed["count"] >= 2

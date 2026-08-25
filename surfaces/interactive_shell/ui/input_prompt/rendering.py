@@ -7,13 +7,14 @@ from prompt_toolkit.formatted_text import ANSI
 from rich.console import Console
 from rich.text import Text
 
+from core.agent_harness.session.pending_choice import parse_ask_user_answers
 from infrastructure.terminal import theme as ui_theme
 from surfaces.interactive_shell.runtime import Session
 from surfaces.interactive_shell.ui.handoff_questions import (
     handoff_answer_style,
     last_assistant_asked_handoff,
+    render_ask_user_qa,
     render_handoff_answer_marker,
-    try_render_ask_user_submission,
 )
 from surfaces.interactive_shell.ui.input_prompt.completion import completion_preview_hint_ansi
 from surfaces.interactive_shell.ui.input_prompt.layout import (
