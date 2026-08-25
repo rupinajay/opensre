@@ -136,7 +136,11 @@ def read_key_unix(
         termios.tcsetattr(fd, termios.TCSADRAIN, old)  # type: ignore[attr-defined]
 
 
-def read_key_windows(*, also_cancel: tuple[bytes, ...] = ()) -> str:
+def read_key_windows(
+    *,
+    also_cancel: tuple[bytes, ...] = (),
+    space_confirms: bool = True,
+) -> str:
     """Read one logical keypress on Windows; return a normalised key name.
 
     Possible return values: ``"up"``, ``"down"``, ``"enter"``,
@@ -150,7 +154,7 @@ def read_key_windows(*, also_cancel: tuple[bytes, ...] = ()) -> str:
     ch = msvcrt.getch()  # type: ignore[attr-defined]
     if ch in (b"\x03", b"\x1b") or ch in also_cancel:
         return "cancel"
-    if ch in (b"\r", b"\n", b" "):
+    if ch in (b"\r", b"\n") or (space_confirms and ch == b" "):
         return "enter"
     if ch == b"\t":
         return "tab"
@@ -178,4 +182,10 @@ def read_key_windows(*, also_cancel: tuple[bytes, ...] = ()) -> str:
     return "ignore"
 
 
-__all__ = ["flush_stdin_unix", "read_key_unix", "read_key_windows", "restore_stdin_terminal"]
+__all__ = [
+    "flush_pending_input",
+    "flush_stdin_unix",
+    "read_key_unix",
+    "read_key_windows",
+    "restore_stdin_terminal",
+]

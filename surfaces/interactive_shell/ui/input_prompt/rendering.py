@@ -12,11 +12,9 @@ from surfaces.interactive_shell.runtime import Session
 from surfaces.interactive_shell.ui.handoff_questions import (
     handoff_answer_style,
     last_assistant_asked_handoff,
-    render_ask_user_qa,
     render_handoff_answer_marker,
     try_render_ask_user_submission,
 )
-from core.agent_harness.session.pending_choice import parse_ask_user_answers
 from surfaces.interactive_shell.ui.input_prompt.completion import completion_preview_hint_ansi
 from surfaces.interactive_shell.ui.input_prompt.layout import (
     _clip_text,
@@ -98,8 +96,16 @@ def render_submitted_prompt(console: Console, session: Session, text: str) -> No
             list(getattr(session, "cli_agent_messages", []) or [])
         )
     session.terminal.awaiting_handoff_answer = False
-    if is_handoff_answer and try_render_ask_user_submission(console, text):
-        session.terminal.claim_turn_number()
+    ask_user_pairs = parse_ask_user_answers(stripped) if is_handoff_answer else []
+    if len(ask_user_pairs) >= 2:
+        # This is the user's menu submission — show a real user turn, not a
+        # floating Q&A block that looks like the agent filled the answers in.
+        console.print(Text("↗ You answered", style=str(ui_theme.DIM)))
+        header = Text()
+        header.append(_counter_text(session.terminal.claim_turn_number()), style=str(ui_theme.DIM))
+        header.append("❯ ", style=f"bold {ui_theme.HIGHLIGHT}")
+        console.print(header)
+        render_ask_user_qa(console, ask_user_pairs)
         return
     if is_handoff_answer:
         console.print(render_handoff_answer_marker())

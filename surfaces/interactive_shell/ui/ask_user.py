@@ -68,9 +68,7 @@ def _breadcrumb_ansi(
     parts: list[str] = []
     for index, question in enumerate(questions):
         if index:
-            parts.append(
-                f"{ui_theme.DIM_COUNTER_ANSI}{_BREADCRUMB_SEP}{ui_theme.ANSI_RESET}"
-            )
+            parts.append(f"{ui_theme.DIM_COUNTER_ANSI}{_BREADCRUMB_SEP}{ui_theme.ANSI_RESET}")
         filled = bool(answered[index]) if index < len(answered) else False
         glyph = "●" if filled or index == current else "○"
         label = question.label.strip() or f"Q{index + 1}"
@@ -127,7 +125,11 @@ def _erase_ask_user(question: AskUserQuestion) -> None:
 
 
 def _read_wizard_action() -> str:
-    return read_key_windows() if os.name == "nt" else read_key_unix()
+    # Space must not confirm — leftover whitespace from the previous prompt
+    # would otherwise pick option 1 on every question before the user sees it.
+    if os.name == "nt":
+        return read_key_windows(space_confirms=False)
+    return read_key_unix(space_confirms=False)
 
 
 def _next_unanswered(answers: list[str | None], start: int) -> int:
@@ -153,6 +155,7 @@ def repl_ask_user(
     if len(items) < 2 or not repl_tty_interactive():
         return None
     drain_stale_cpr_bytes()
+    flush_pending_input()
     answers: list[str | None] = [None] * len(items)
     q_idx = 0
     opt_idx = 0
@@ -169,7 +172,12 @@ def repl_ask_user(
             option_index=opt_idx,
             erase_lines=0 if first else current_height,
         )
-        first = False
+        if first:
+            # Drop the newline that submitted this turn / autosubmitted
+            # ``/choose``. Flush after the first draw so the menu is on
+            # screen before we wait — leftover Enter must not auto-pick.
+            flush_pending_input()
+            first = False
         current_height = _menu_height(question)
         action = _read_wizard_action()
         if action in ("tab", "right"):
